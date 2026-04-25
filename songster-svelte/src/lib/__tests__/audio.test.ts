@@ -84,4 +84,56 @@ describe('audio module', () => {
 			expect(mockFetch).toHaveBeenCalledTimes(2);
 		});
 	});
+
+	describe('fetchPreviewUrl error paths', () => {
+		it('handles fetch rejection gracefully and does not play audio', async () => {
+			mockFetch.mockRejectedValue(new Error('Network error'));
+			mockAudioPlay.mockClear();
+			const { playPreview, stopPreview } = await getAudio();
+			const song = { id: 'catch-test', num: 10, title: 'Err', artist: 'Art', year: 2000 };
+			await expect(playPreview(song)).resolves.toBeUndefined();
+			expect(mockAudioPlay).not.toHaveBeenCalled();
+			stopPreview();
+		});
+
+		it('handles non-ok response and does not play audio', async () => {
+			mockFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
+			mockAudioPlay.mockClear();
+			const { playPreview, stopPreview } = await getAudio();
+			const song = { id: 'non-ok-test', num: 11, title: 'Nope', artist: 'Art', year: 2000 };
+			await expect(playPreview(song)).resolves.toBeUndefined();
+			expect(mockAudioPlay).not.toHaveBeenCalled();
+			stopPreview();
+		});
+
+		it('handles empty results (null preview URL) without creating Audio', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve({ results: [] }),
+			});
+			mockAudioPlay.mockClear();
+			const { playPreview, stopPreview } = await getAudio();
+			const song = { id: 'null-url-test', num: 12, title: 'NoPreview', artist: 'Art', year: 2000 };
+			await expect(playPreview(song)).resolves.toBeUndefined();
+			expect(mockAudioPlay).not.toHaveBeenCalled();
+			stopPreview();
+		});
+	});
+
+	describe('inflight dedup', () => {
+		it('deduplicates concurrent requests for the same song', async () => {
+			mockFetch.mockClear();
+			let resolveFetch: (v: any) => void = () => {};
+			const fetchPromise = new Promise(r => { resolveFetch = r; });
+			mockFetch.mockReturnValue(fetchPromise);
+			const { playPreview, stopPreview } = await getAudio();
+			const song = { id: 'dedup-test', num: 20, title: 'Dedup', artist: 'Art', year: 2000 };
+			const p1 = playPreview(song);
+			const p2 = playPreview(song);
+			expect(mockFetch).toHaveBeenCalledTimes(1);
+			resolveFetch({ ok: true, json: () => Promise.resolve({ results: [{ previewUrl: 'https://example.com/dedup.mp3' }] }) });
+			await Promise.all([p1, p2]);
+			stopPreview();
+		});
+	});
 });

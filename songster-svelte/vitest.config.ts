@@ -18,6 +18,28 @@ export default defineConfig({
 		environment: 'jsdom',
 		globals: true,
 		setupFiles: ['src/test-setup.ts'],
+		coverage: {
+			provider: 'v8',
+			reporter: ['text', 'html', 'clover'],
+			include: [
+				'src/lib/stores/game.ts',
+				'src/lib/stores/tweaks.ts',
+				'src/lib/audio.ts',
+				'src/lib/songs.ts',
+				'src/lib/utils.ts',
+				'src/lib/components/Chrome.svelte',
+				'src/lib/components/HitCard.svelte',
+				'src/lib/components/PlayerChip.svelte',
+				'src/lib/components/Timeline.svelte',
+				'src/lib/components/Vinyl.svelte',
+			],
+			thresholds: {
+				statements: 90,
+				branches: 80,
+				functions: 90,
+				lines: 90,
+			},
+		},
 	},
 	ssr: {
 		noExternal: ['svelte', '@sveltejs/kit', '@testing-library/svelte'],
