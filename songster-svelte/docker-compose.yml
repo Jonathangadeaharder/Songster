@@ -1,0 +1,56 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PUBLIC_SUPABASE_URL=http://kong:8000
+      - PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+      - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+    depends_on:
+      - kong
+
+  supabase-db:
+    image: supabase/postgres:15.1.0.117
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: your-super-secret-password
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+
+  supabase-auth:
+    image: supabase/gotrue:v2.132.3
+    depends_on:
+      - supabase-db
+    environment:
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:your-super-secret-password@supabase-db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_JWT_SECRET: your-jwt-secret-at-least-32-characters
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+
+  supabase-realtime:
+    image: supabase/realtime:v2.15.0
+    depends_on:
+      - supabase-db
+    environment:
+      DB_HOST: supabase-db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: your-super-secret-password
+      DB_NAME: postgres
+      SECRET_KEY_BASE: your-realtime-secret
+
+  kong:
+    image: kong:2.8.1
+    ports:
+      - "8000:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+    volumes:
+      - ./kong.yml:/var/lib/kong/kong.yml:ro
+
+volumes:
+  supabase-db-data:
