@@ -10,7 +10,7 @@
 	} = $props();
 
 	let sizeMap = { sm: { w: 70, h: 96 }, md: { w: 100, h: 140 } };
-	let { w, h } = sizeMap[size];
+	let { w, h } = $derived(sizeMap[size]);
 </script>
 
 <div
@@ -143,7 +143,7 @@
 		opacity: 0.5;
 		text-align: center;
 	}
-	.card-back .card-face {
+	.card-back.card-face {
 		justify-content: center;
 	}
 </style>

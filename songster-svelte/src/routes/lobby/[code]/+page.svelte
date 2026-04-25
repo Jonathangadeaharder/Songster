@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import Chrome from '$lib/components/Chrome.svelte';
 	import PlayerChip from '$lib/components/PlayerChip.svelte';
 	import { game } from '$lib/stores/game';
@@ -7,36 +8,27 @@
 
 	let code: string = $derived(page.params.code ?? '');
 	let { players } = game;
-	let started = $state(false);
 
 	function handleStart() {
 		game.startGame();
-		started = true;
+		goto(`/game/${code}`);
 	}
 </script>
 
-{#if !started}
-	<Chrome title="LOBBY · {code}">
-		{#snippet children()}
-			<div class="lobby">
-				<h2>Room {code}</h2>
-				<p class="sub">Waiting for players…</p>
-				<div class="player-list">
-					{#each $players as player}
-						<PlayerChip {player} active={player.id === 'p1'} />
-					{/each}
-				</div>
-				<button class="start-btn" onclick={handleStart}>Start Game</button>
+<Chrome title="LOBBY · {code}">
+	{#snippet children()}
+		<div class="lobby">
+			<h2>Room {code}</h2>
+			<p class="sub">Waiting for players…</p>
+			<div class="player-list">
+				{#each $players as player}
+					<PlayerChip {player} active={player.id === 'p1'} />
+				{/each}
 			</div>
-		{/snippet}
-	</Chrome>
-{/if}
-
-{#if started}
-	<script>
-		window.location.href = `/game/${code}`;
-	</script>
-{/if}
+			<button class="start-btn" onclick={handleStart}>Start Game</button>
+		</div>
+	{/snippet}
+</Chrome>
 
 <style>
 	.lobby {

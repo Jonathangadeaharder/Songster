@@ -21,6 +21,13 @@
 
 	let { primary } = $derived(colors(theme));
 
+	function slotAriaLabel(i: number): string {
+		if (highlightSlot === i) return `Slot ${i}, correct placement`;
+		if (wrongSlot === i) return `Slot ${i}, wrong placement`;
+		if (hoverSlot === i) return `Slot ${i}, drop target`;
+		return `Slot ${i}`;
+	}
+
 	let cardSize = $derived(
 		density === 'compact' ? { w: 52, h: 72 } :
 		density === 'comfy' ? { w: 90, h: 120 } :
@@ -35,6 +42,7 @@
 		{#each Array(slots) as _, i}
 			<button
 				class="slot"
+				aria-label={slotAriaLabel(i)}
 				disabled={frozen || (!onSlotClick && !onSlotDrop)}
 				onclick={onSlotClick ? () => onSlotClick(i) : undefined}
 				ondragover={onSlotDragOver ? (e: DragEvent) => onSlotDragOver(e, i) : undefined}

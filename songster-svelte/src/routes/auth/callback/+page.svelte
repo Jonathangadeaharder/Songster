@@ -4,8 +4,8 @@
 
 	onMount(async () => {
 		const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-		if (error) { window.location.href = '/auth/login'; return; }
-		window.location.href = '/';
+		if (error) { window.location.replace('/auth/login'); return; }
+		window.location.replace('/');
 	});
 </script>
 

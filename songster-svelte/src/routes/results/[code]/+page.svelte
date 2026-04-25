@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import Chrome from '$lib/components/Chrome.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import { game } from '$lib/stores/game';
@@ -16,7 +17,7 @@
 				<div class="winner-label">Winner</div>
 				<div class="winner-name">{$winner?.name ?? 'Nobody'}</div>
 			</div>
-			<button class="replay-btn" onclick={() => game.onReplay()}>Play Again</button>
+			<button class="replay-btn" onclick={() => { game.onReplay(); goto('/'); }}>Play Again</button>
 		</div>
 	{/snippet}
 </Chrome>

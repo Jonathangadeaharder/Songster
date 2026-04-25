@@ -1,2 +1,5 @@
 User-agent: *
-Allow: /
+Disallow: /auth/
+Disallow: /lobby
+Disallow: /game
+Disallow: /results

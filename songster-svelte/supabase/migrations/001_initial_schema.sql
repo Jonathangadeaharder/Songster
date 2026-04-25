@@ -41,6 +41,7 @@ CREATE OR REPLACE FUNCTION public.create_room(host_name VARCHAR)
 RETURNS public.rooms AS $$
 DECLARE
   new_room public.rooms;
+  new_player public.players;
   chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   room_code VARCHAR(8) := '';
 BEGIN
@@ -49,6 +50,7 @@ BEGIN
   END LOOP;
   
   INSERT INTO public.rooms (code) VALUES (room_code) RETURNING * INTO new_room;
+  INSERT INTO public.players (room_id, name, is_host) VALUES (new_room.id, host_name, true) RETURNING * INTO new_player;
   RETURN new_room;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -74,3 +76,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.players;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.game_state;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.timelines;
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_rooms_code ON public.rooms(code);
+CREATE INDEX IF NOT EXISTS idx_players_room_id ON public.players(room_id);
+CREATE INDEX IF NOT EXISTS idx_players_user_id ON public.players(user_id);

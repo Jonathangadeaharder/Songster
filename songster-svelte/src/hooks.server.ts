@@ -6,7 +6,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
-			setAll: (cookies) => {
+			setAll: (cookies: { name: string; value: string; options: Record<string, unknown> }[]) => {
 				cookies.forEach(({ name, value, options }) =>
 					event.cookies.set(name, value, { ...options, path: '/' })
 				);
@@ -16,6 +16,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.safeGetSession = async () => {
 		const { data: { session } } = await event.locals.supabase.auth.getSession();
+		if (!session) return { session: null };
+		const { data: { user } } = await event.locals.supabase.auth.getUser();
+		if (!user) return { session: null };
 		return { session };
 	};
 

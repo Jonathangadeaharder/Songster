@@ -6,7 +6,7 @@
 
 <div class="twk-row twk-row-h">
 	<div class="twk-lbl"><span>{label}</span></div>
-	<button type="button" class="twk-toggle" data-on={value ? '1' : '0'} role="switch" aria-checked={!!value} onclick={() => onchange(!value)}><i></i></button>
+	<button type="button" class="twk-toggle" data-on={value ? '1' : '0'} role="switch" aria-checked={!!value} aria-label={label} onclick={() => onchange(!value)}><i></i></button>
 </div>
 
 <style>

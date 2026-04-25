@@ -42,7 +42,7 @@
 	<div class="twk-lbl">
 		<span>{label}</span>
 	</div>
-	<div bind:this={trackEl} role="radiogroup" onpointerdown={onPointerDown} class="twk-seg" class:dragging>
+	<div bind:this={trackEl} role="radiogroup" tabindex="0" onpointerdown={onPointerDown} class="twk-seg" class:dragging>
 		<div class="twk-seg-thumb" style="left: calc(2px + {idx} * (100% - 4px) / {n}); width: calc((100% - 4px) / {n})"></div>
 		{#each opts as o}
 			<button type="button" role="radio" aria-checked={o.value === value} onclick={() => onchange(o.value)}>

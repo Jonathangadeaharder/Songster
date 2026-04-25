@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { Player, Theme } from '$lib/types';
+	import { colors } from '$lib/utils';
 	let { player, active = false, theme = 'light' as Theme }: { player: Player; active?: boolean; theme?: Theme } = $props();
+	const c = $derived(colors(theme));
 </script>
 
 <div class="chip" class:active style="opacity: {active ? 1 : 0.5}">
-	<div class="avatar" style="background: {active ? (theme === 'dark' ? '#f4efe4' : '#0a0a0a') : 'transparent'}; color: {active ? (theme === 'dark' ? '#0a0a0a' : '#f4efe4') : 'inherit'}">{player.avatar}</div>
+	<div class="avatar" style="background: {active ? c.primary : 'transparent'}; color: {active ? c.paper : 'inherit'}">{player.avatar}</div>
 	<div class="info">
 		<div class="name">{player.name}</div>
 		<div class="stats">{player.timeline.length}/10 · ◈{player.tokens}</div>

@@ -50,7 +50,7 @@
 	<button class="twk-toggleopen" onclick={() => open = true}>⚙ Tweaks</button>
 {:else}
 	<div class="twk-panel" bind:this={panelEl} style="right: {offsetX}px; bottom: {offsetY}px">
-		<div class="twk-hd" onmousedown={onDragStart}>
+		<div class="twk-hd" role="toolbar" tabindex="0" aria-label="Drag to move tweaks panel" onmousedown={onDragStart}>
 			<b>{title}</b>
 			<button class="twk-x" aria-label="Close tweaks" onmousedown={(e) => e.stopPropagation()} onclick={() => open = false}>✕</button>
 		</div>
@@ -62,7 +62,7 @@
 
 <style>
 	.twk-panel {
-		position: fixed; right: 16px; bottom: 16px; z-index: 2147483646;
+		position: fixed; right: 16px; bottom: 16px; z-index: 9999;
 		width: 280px; max-height: calc(100vh - 32px);
 		display: flex; flex-direction: column;
 		background: rgba(250,249,247,.78); color: #29261b;
@@ -74,7 +74,7 @@
 		overflow: hidden;
 	}
 	.twk-toggleopen {
-		position: fixed; right: 16px; bottom: 16px; z-index: 2147483645;
+		position: fixed; right: 16px; bottom: 16px; z-index: 9998;
 		appearance: none; border: 0; height: 36px; padding: 0 14px;
 		border-radius: 10px; background: rgba(10,10,10,.85); color: #f4efe4;
 		font-family: 'IBM Plex Mono', monospace; font-size: 11px;

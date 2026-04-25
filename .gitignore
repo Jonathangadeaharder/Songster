@@ -1,8 +1,7 @@
 node_modules/
 dist/
 .svelte-kit/
-.env
-.env.local
+.env*
 *.local
 .DS_Store
 *.pem

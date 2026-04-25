@@ -1,17 +1,18 @@
-FROM node:20-alpine AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
-FROM node:20-alpine
+FROM node:22-slim
+RUN groupadd -r app && useradd -r -g app app
 WORKDIR /app
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json .
-RUN npm install --omit=dev
-
-ENV HOST=0.0.0.0
-ENV PORT=3000
+RUN chown -R app:app /app
+USER app
 EXPOSE 3000
 CMD ["node", "build"]

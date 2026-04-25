@@ -4,19 +4,25 @@
 	let password = $state('');
 	let loading = $state(false);
 	let error = $state('');
+	let message = $state('');
 
 	async function handleLogin() {
-		loading = true; error = '';
+		loading = true; error = ''; message = '';
 		const { error: err } = await supabase.auth.signInWithPassword({ email, password });
 		if (err) { error = err.message; loading = false; return; }
-		window.location.href = '/';
+		window.location.replace('/');
 	}
 
 	async function handleSignup() {
-		loading = true; error = '';
-		const { error: err } = await supabase.auth.signUp({ email, password });
+		loading = true; error = ''; message = '';
+		const { data, error: err } = await supabase.auth.signUp({ email, password });
 		if (err) { error = err.message; loading = false; return; }
-		window.location.href = '/';
+		if (data.session) {
+			window.location.replace('/');
+		} else {
+			message = 'Check your email to confirm your account before signing in.';
+			loading = false;
+		}
 	}
 </script>
 
@@ -26,6 +32,7 @@
 		<input type="email" bind:value={email} placeholder="Email" required />
 		<input type="password" bind:value={password} placeholder="Password" required />
 		{#if error}<p class="error">{error}</p>{/if}
+		{#if message}<p class="message">{message}</p>{/if}
 		<div class="btns">
 			<button type="submit" disabled={loading}>Sign In</button>
 			<button type="button" onclick={handleSignup} disabled={loading}>Sign Up</button>
@@ -53,4 +60,5 @@
 		letter-spacing: 1px; text-transform: uppercase;
 	}
 	.error { color: #ff3b30; font-size: 13px; }
+	.message { color: #34c759; font-size: 13px; }
 </style>

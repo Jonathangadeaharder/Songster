@@ -3,10 +3,11 @@ import type { Player, Song, Phase, GameState } from '$lib/types';
 import { seededPlayers, buildDrawPile, validatePlacement, findCorrectSlot, SONG_DECK } from '$lib/songs';
 import { playPreview, stopPreview, preloadPreviews } from '$lib/audio';
 
+const initialPlayers = seededPlayers();
 const screen = writable<'lobby' | 'play' | 'win'>('lobby');
 const round = writable(1);
-const players = writable<Player[]>(seededPlayers());
-const drawPile = writable<Song[]>(buildDrawPile(seededPlayers()));
+const players = writable<Player[]>(initialPlayers);
+const drawPile = writable<Song[]>(buildDrawPile(initialPlayers));
 const activeCard = writable<Song | null>(null);
 const activePlayerId = writable('p1');
 const phase = writable<Phase>('draw');
@@ -20,17 +21,16 @@ const dragging = writable(false);
 preloadPreviews(SONG_DECK);
 
 function drawNext() {
-	drawPile.update(prev => {
-		if (prev.length === 0) return prev;
-		const [next, ...rest] = prev;
-		activeCard.set(next);
-		phase.set('draw');
-		hoverSlot.set(null);
-		placedSlot.set(null);
-		placedResult.set(null);
-		interceptor.set(null);
-		return rest;
-	});
+	const pile = get(drawPile);
+	if (pile.length === 0) return;
+	const [next, ...rest] = pile;
+	drawPile.set(rest);
+	activeCard.set(next);
+	phase.set('draw');
+	hoverSlot.set(null);
+	placedSlot.set(null);
+	placedResult.set(null);
+	interceptor.set(null);
 }
 
 function startGame() {
@@ -39,11 +39,16 @@ function startGame() {
 	drawNext();
 }
 
+let playTimer: ReturnType<typeof setTimeout> | undefined;
+
 function onPlay() {
 	phase.set('listen');
 	const card = get(activeCard);
 	if (card) void playPreview(card);
-	setTimeout(() => phase.set('place'), 1400);
+	if (playTimer) clearTimeout(playTimer);
+	playTimer = setTimeout(() => {
+		if (get(phase) === 'listen') phase.set('place');
+	}, 1400);
 }
 
 function onPlace(slot: number) {
@@ -56,7 +61,8 @@ function onPlace(slot: number) {
 
 	const currentPlayers = get(players);
 	const currentActiveId = get(activePlayerId);
-	const active = currentPlayers.find(p => p.id === currentActiveId)!;
+	const active = currentPlayers.find(p => p.id === currentActiveId);
+	if (!active) return;
 	const ok = validatePlacement(active.timeline, card, slot);
 	placedResult.set(ok);
 
@@ -95,26 +101,23 @@ function onChallenge() {
 
 	setTimeout(() => {
 		const correctSlotVal = findCorrectSlot(me.timeline, card);
-		const ok = correctSlotVal !== -1;
 		placedSlot.set(correctSlotVal);
-		placedResult.set(ok);
+		placedResult.set(true);
 
-		if (ok) {
-			const newTimeline = [
-				...me.timeline.slice(0, correctSlotVal),
-				card,
-				...me.timeline.slice(correctSlotVal),
-			];
-			const updatedPlayers = get(players).map(p =>
-				p.id === 'p1' ? { ...p, timeline: newTimeline } : p
-			);
-			players.set(updatedPlayers);
-			if (newTimeline.length >= 10) {
-				setTimeout(() => {
-					winner.set(updatedPlayers.find(p => p.id === 'p1')!);
-					screen.set('win');
-				}, 1200);
-			}
+		const newTimeline = [
+			...me.timeline.slice(0, correctSlotVal),
+			card,
+			...me.timeline.slice(correctSlotVal),
+		];
+		const updatedPlayers = get(players).map(p =>
+			p.id === 'p1' ? { ...p, timeline: newTimeline } : p
+		);
+		players.set(updatedPlayers);
+		if (newTimeline.length >= 10) {
+			setTimeout(() => {
+				winner.set(updatedPlayers.find(p => p.id === 'p1')!);
+				screen.set('win');
+			}, 1200);
 		}
 		phase.set('reveal');
 		stopPreview();

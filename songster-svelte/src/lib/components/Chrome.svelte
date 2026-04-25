@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { Theme } from '$lib/types';
+	import { colors } from '$lib/utils';
 	let { theme = 'light' as Theme, title = '', right, children }: {
 		theme?: Theme; title?: string; right?: Snippet; children: Snippet;
 	} = $props();
+	const c = $derived(colors(theme));
 </script>
 
-<div class="shell" style="background: {theme === 'dark' ? '#0a0a0a' : '#f4efe4'}; color: {theme === 'dark' ? '#f4efe4' : '#0a0a0a'}">
+<div class="shell" style="background: {c.paper}; color: {c.primary}">
 	{#if title}
 		<div class="chrome-bar">
 			<div class="chrome-title">{title}</div>

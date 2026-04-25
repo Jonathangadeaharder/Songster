@@ -9,8 +9,8 @@
 	import { game } from '$lib/stores/game';
 	import { tweaks } from '$lib/stores/tweaks';
 	import { colors } from '$lib/utils';
-	import type { Player } from '$lib/types';
-	import { untrack } from 'svelte';
+	import type { Player, Theme, ArtStyle, FlipStyle, Density } from '$lib/types';
+	import { onMount, untrack } from 'svelte';
 	import TweaksPanel from '$lib/components/Tweaks.svelte';
 	import TweakSection from '$lib/components/TweakSection.svelte';
 	import TweakRadio from '$lib/components/TweakRadio.svelte';
@@ -24,14 +24,14 @@
 	const { round, drawPile, players, activeCard, activePlayerId, phase, placedSlot, placedResult, interceptor, screen: screenStore, dragging } = game;
 
 	let activePlayer: Player | undefined = $derived($players.find((p: Player) => p.id === $activePlayerId));
-	let me: Player = $derived($players.find((p: Player) => p.id === 'p1')!);
+	let me: Player | undefined = $derived($players.find((p: Player) => p.id === 'p1'));
+	let myTimeline = $derived(me?.timeline ?? []);
+	let myTokens = $derived(me?.tokens ?? 0);
+	let myLength = $derived(me?.timeline.length ?? 0);
 	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === 'p1');
 
-	$effect(() => {
-		if ($screenStore === 'lobby') {
-			$screenStore;
-			untrack(() => game.startGame());
-		}
+	onMount(() => {
+		if ($screenStore === 'lobby') game.startGame();
 	});
 
 	$effect(() => {
@@ -133,6 +133,7 @@
 				{#if $activeCard && ($phase === 'draw' || $phase === 'listen' || $phase === 'place' || $phase === 'challenge')}
 					<div
 						class="card-wrapper"
+						role="application"
 						draggable={myTurnAndPlacing ? 'true' : undefined}
 						ondragstart={onCardDragStart}
 						ondragend={onCardDragEnd}
@@ -160,7 +161,7 @@
 						artStyle={t.artStyle}
 						flipStyle={t.flipStyle}
 						theme={t.theme}
-						correct={$placedResult}
+						correct={$placedResult ?? undefined}
 					/>
 				{/if}
 			</div>
@@ -174,10 +175,10 @@
 					<button
 						class="intercept-btn"
 						onclick={onChallenge}
-						disabled={me.tokens <= 0}
-						style="opacity: {me.tokens > 0 ? 1 : 0.35}; cursor: {me.tokens > 0 ? 'pointer' : 'default'}"
+						disabled={myTokens <= 0}
+						style="opacity: {myTokens > 0 ? 1 : 0.35}; cursor: {myTokens > 0 ? 'pointer' : 'default'}"
 					>
-						◈ {me.tokens} · Intercept
+						◈ {myTokens} · Intercept
 					</button>
 				</div>
 			{/if}
@@ -186,12 +187,12 @@
 				<div class="timeline-header">
 					<div class="timeline-label">Your Timeline</div>
 					<div class="timeline-count">
-						{me.timeline.length}<span style="opacity: 0.4">/10</span>
+						{myLength}<span style="opacity: 0.4">/10</span>
 					</div>
 				</div>
 
 				<Timeline
-					cards={me.timeline}
+					cards={myTimeline}
 					density={t.density}
 					artStyle={t.artStyle}
 					theme={t.theme}
@@ -221,15 +222,15 @@
 
 	<TweaksPanel title="Tweaks · Songster">
 		<TweakSection label="Theme" />
-		<TweakRadio label="Mode" value={t.theme} options={[{ value: 'light', label: 'Paper' }, { value: 'dark', label: 'After-hours' }]} onchange={(v) => tweaks.set('theme', v)} />
-		<TweakRadio label="Card Art" value={t.artStyle} options={[{ value: 'grooves', label: 'Grooves' }, { value: 'halftone', label: 'Halftone' }, { value: 'solid', label: 'Solid' }, { value: 'inverse', label: 'Inverse' }]} onchange={(v) => tweaks.set('artStyle', v)} />
+		<TweakRadio label="Mode" value={t.theme} options={[{ value: 'light', label: 'Paper' }, { value: 'dark', label: 'After-hours' }]} onchange={(v) => tweaks.set('theme', v as Theme)} />
+		<TweakRadio label="Card Art" value={t.artStyle} options={[{ value: 'grooves', label: 'Grooves' }, { value: 'halftone', label: 'Halftone' }, { value: 'solid', label: 'Solid' }, { value: 'inverse', label: 'Inverse' }]} onchange={(v) => tweaks.set('artStyle', v as ArtStyle)} />
 
 		<TweakSection label="Motion" />
-		<TweakRadio label="Flip" value={t.flipStyle} options={[{ value: 'flip', label: '3D' }, { value: 'slide', label: 'Slide' }, { value: 'fade', label: 'Fade' }, { value: 'instant', label: 'Cut' }]} onchange={(v) => tweaks.set('flipStyle', v)} />
+		<TweakRadio label="Flip" value={t.flipStyle} options={[{ value: 'flip', label: '3D' }, { value: 'slide', label: 'Slide' }, { value: 'fade', label: 'Fade' }, { value: 'instant', label: 'Cut' }]} onchange={(v) => tweaks.set('flipStyle', v as FlipStyle)} />
 		<TweakSlider label="Anim intensity" value={t.animIntensity} min={0.3} max={2.5} step={0.1} onchange={(v) => tweaks.set('animIntensity', v)} />
 
 		<TweakSection label="Timeline" />
-		<TweakRadio label="Density" value={t.density} options={[{ value: 'compact', label: 'Tight' }, { value: 'regular', label: 'Reg' }, { value: 'comfy', label: 'Airy' }]} onchange={(v) => tweaks.set('density', v)} />
+		<TweakRadio label="Density" value={t.density} options={[{ value: 'compact', label: 'Tight' }, { value: 'regular', label: 'Reg' }, { value: 'comfy', label: 'Airy' }]} onchange={(v) => tweaks.set('density', v as Density)} />
 
 		<TweakSection label="Rules" />
 		<TweakToggle label="Interception tokens" value={t.interceptionEnabled} onchange={(v) => tweaks.set('interceptionEnabled', v)} />

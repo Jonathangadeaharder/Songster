@@ -18,7 +18,7 @@ async function fetchPreviewUrl(song: Song): Promise<string | null> {
 			return u;
 		})
 		.catch(() => {
-			previewUrls.set(song.id, null);
+			inflight.delete(song.id);
 			return null;
 		})
 		.finally(() => inflight.delete(song.id));

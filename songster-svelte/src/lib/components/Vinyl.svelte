@@ -2,10 +2,11 @@
 	let { size = 190, spinning = false, label = 'SONGSTER', subLabel = '33⅓ RPM', intensity = 1 }: {
 		size?: number; spinning?: boolean; label?: string; subLabel?: string; intensity?: number;
 	} = $props();
+	let safeIntensity = $derived(Math.max(0.1, intensity));
 </script>
 
 <div class="vinyl-wrap" style="width: {size}px; height: {size}px">
-	<svg viewBox="0 0 200 200" class:spinning style="animation-duration: {2 / intensity}s">
+	<svg viewBox="0 0 200 200" class:spinning style="animation-duration: {2 / safeIntensity}s">
 		<circle cx="100" cy="100" r="98" fill="currentColor" opacity="0.05" />
 		<circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.15" />
 		<circle cx="100" cy="100" r="65" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.1" />

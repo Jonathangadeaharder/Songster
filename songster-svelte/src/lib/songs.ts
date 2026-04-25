@@ -43,11 +43,12 @@ export function shuffled<T>(arr: T[]): T[] {
 }
 
 export function seededPlayers(): Player[] {
+  const deck = shuffled(SONG_DECK);
   return [
-    { id: 'p1', name: 'You',   avatar: 'Y', timeline: [shuffled(SONG_DECK)[0]], tokens: 3 },
-    { id: 'p2', name: 'Marlo', avatar: 'M', timeline: [shuffled(SONG_DECK)[1]], tokens: 3 },
-    { id: 'p3', name: 'June',  avatar: 'J', timeline: [shuffled(SONG_DECK)[2]], tokens: 3 },
-    { id: 'p4', name: 'Kaz',   avatar: 'K', timeline: [shuffled(SONG_DECK)[3]], tokens: 3 },
+    { id: 'p1', name: 'You',   avatar: 'Y', timeline: [deck[0]], tokens: 3 },
+    { id: 'p2', name: 'Marlo', avatar: 'M', timeline: [deck[1]], tokens: 3 },
+    { id: 'p3', name: 'June',  avatar: 'J', timeline: [deck[2]], tokens: 3 },
+    { id: 'p4', name: 'Kaz',   avatar: 'K', timeline: [deck[3]], tokens: 3 },
   ];
 }
 
