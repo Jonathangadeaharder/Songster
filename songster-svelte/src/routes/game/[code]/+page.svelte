@@ -133,7 +133,8 @@
 				{#if $activeCard && ($phase === 'draw' || $phase === 'listen' || $phase === 'place' || $phase === 'challenge')}
 					<div
 						class="card-wrapper"
-						role="application"
+						role="group"
+						aria-label="Active card"
 						draggable={myTurnAndPlacing ? 'true' : undefined}
 						ondragstart={onCardDragStart}
 						ondragend={onCardDragEnd}

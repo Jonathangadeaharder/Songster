@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.players (
   name VARCHAR(50) NOT NULL,
   avatar VARCHAR(2) DEFAULT '♪',
   tokens INT DEFAULT 3,
+  is_host BOOLEAN DEFAULT false,
   joined_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -49,8 +50,8 @@ BEGIN
     room_code := room_code || substr(chars, floor(random() * length(chars) + 1)::int, 1);
   END LOOP;
   
-  INSERT INTO public.rooms (code) VALUES (room_code) RETURNING * INTO new_room;
-  INSERT INTO public.players (room_id, name, is_host) VALUES (new_room.id, host_name, true) RETURNING * INTO new_player;
+  INSERT INTO public.rooms (code, host_id) VALUES (room_code, auth.uid()) RETURNING * INTO new_room;
+  INSERT INTO public.players (room_id, user_id, name, is_host) VALUES (new_room.id, auth.uid(), host_name, true) RETURNING * INTO new_player;
   RETURN new_room;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -65,8 +66,8 @@ BEGIN
   SELECT * INTO target_room FROM public.rooms WHERE code = room_code;
   IF NOT FOUND THEN RAISE EXCEPTION 'Room not found'; END IF;
   
-  INSERT INTO public.players (room_id, name)
-  VALUES (target_room.id, player_name) RETURNING * INTO new_player;
+  INSERT INTO public.players (room_id, user_id, name)
+  VALUES (target_room.id, auth.uid(), player_name) RETURNING * INTO new_player;
   RETURN new_player;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

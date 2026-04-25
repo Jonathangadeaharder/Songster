@@ -58,8 +58,9 @@ export function buildDrawPile(players: Player[]): Song[] {
 }
 
 export function validatePlacement(timeline: Song[], card: Song, slot: number): boolean {
-  const correct = findCorrectSlot(timeline, card);
-  return correct === slot;
+  const afterPrev = slot === 0 || timeline[slot - 1].year <= card.year;
+  const beforeNext = slot === timeline.length || card.year <= timeline[slot].year;
+  return afterPrev && beforeNext;
 }
 
 export function findCorrectSlot(timeline: Song[], card: Song): number {
