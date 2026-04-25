@@ -23,6 +23,11 @@
 
 	const { round, drawPile, players, activeCard, activePlayerId, phase, placedSlot, placedResult, interceptor, screen: screenStore, dragging } = game;
 
+	function setTheme(v: string) { tweaks.set('theme', v as Theme); }
+	function setArtStyle(v: string) { tweaks.set('artStyle', v as ArtStyle); }
+	function setFlipStyle(v: string) { tweaks.set('flipStyle', v as FlipStyle); }
+	function setDensity(v: string) { tweaks.set('density', v as Density); }
+
 	let activePlayer: Player | undefined = $derived($players.find((p: Player) => p.id === $activePlayerId));
 	let me: Player | undefined = $derived($players.find((p: Player) => p.id === 'p1'));
 	let myTimeline = $derived(me?.timeline ?? []);
@@ -124,7 +129,7 @@
 					{:else if $phase === 'reveal'}
 						{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
 					{:else if $phase === 'challenge'}
-						{$players.find((p: Player) => p.id === $interceptor)?.name} challenged!
+						{$players.find((p) => p.id === $interceptor)?.name} challenged!
 					{/if}
 				</div>
 			</div>
@@ -202,10 +207,10 @@
 					hoverSlot={dragSlot}
 					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === 'p1' ? $placedSlot : null}
 					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === 'p1' ? $placedSlot : null}
-					onSlotClick={myTurnAndPlacing ? (i: number) => game.onPlace(i) : undefined}
-					onSlotDragOver={myTurnAndPlacing ? (_e: DragEvent, i: number) => onSlotDragOver(_e, i) : undefined}
-					onSlotDragLeave={myTurnAndPlacing ? (_e: DragEvent, i: number) => onSlotDragLeave(_e, i) : undefined}
-					onSlotDrop={myTurnAndPlacing ? (_e: DragEvent, i: number) => onSlotDrop(_e, i) : undefined}
+					onSlotClick={myTurnAndPlacing ? (i) => game.onPlace(i) : undefined}
+					onSlotDragOver={myTurnAndPlacing ? (_e, i) => onSlotDragOver(_e, i) : undefined}
+					onSlotDragLeave={myTurnAndPlacing ? (_e, i) => onSlotDragLeave(_e, i) : undefined}
+					onSlotDrop={myTurnAndPlacing ? (_e, i) => onSlotDrop(_e, i) : undefined}
 				/>
 
 				{#if $phase === 'reveal'}
@@ -223,15 +228,15 @@
 
 	<TweaksPanel title="Tweaks · Songster">
 		<TweakSection label="Theme" />
-		<TweakRadio label="Mode" value={t.theme} options={[{ value: 'light', label: 'Paper' }, { value: 'dark', label: 'After-hours' }]} onchange={(v) => tweaks.set('theme', v as Theme)} />
-		<TweakRadio label="Card Art" value={t.artStyle} options={[{ value: 'grooves', label: 'Grooves' }, { value: 'halftone', label: 'Halftone' }, { value: 'solid', label: 'Solid' }, { value: 'inverse', label: 'Inverse' }]} onchange={(v) => tweaks.set('artStyle', v as ArtStyle)} />
+		<TweakRadio label="Mode" value={t.theme} options={[{ value: 'light', label: 'Paper' }, { value: 'dark', label: 'After-hours' }]} onchange={setTheme} />
+		<TweakRadio label="Card Art" value={t.artStyle} options={[{ value: 'grooves', label: 'Grooves' }, { value: 'halftone', label: 'Halftone' }, { value: 'solid', label: 'Solid' }, { value: 'inverse', label: 'Inverse' }]} onchange={setArtStyle} />
 
 		<TweakSection label="Motion" />
-		<TweakRadio label="Flip" value={t.flipStyle} options={[{ value: 'flip', label: '3D' }, { value: 'slide', label: 'Slide' }, { value: 'fade', label: 'Fade' }, { value: 'instant', label: 'Cut' }]} onchange={(v) => tweaks.set('flipStyle', v as FlipStyle)} />
+		<TweakRadio label="Flip" value={t.flipStyle} options={[{ value: 'flip', label: '3D' }, { value: 'slide', label: 'Slide' }, { value: 'fade', label: 'Fade' }, { value: 'instant', label: 'Cut' }]} onchange={setFlipStyle} />
 		<TweakSlider label="Anim intensity" value={t.animIntensity} min={0.3} max={2.5} step={0.1} onchange={(v) => tweaks.set('animIntensity', v)} />
 
 		<TweakSection label="Timeline" />
-		<TweakRadio label="Density" value={t.density} options={[{ value: 'compact', label: 'Tight' }, { value: 'regular', label: 'Reg' }, { value: 'comfy', label: 'Airy' }]} onchange={(v) => tweaks.set('density', v as Density)} />
+		<TweakRadio label="Density" value={t.density} options={[{ value: 'compact', label: 'Tight' }, { value: 'regular', label: 'Reg' }, { value: 'comfy', label: 'Airy' }]} onchange={setDensity} />
 
 		<TweakSection label="Rules" />
 		<TweakToggle label="Interception tokens" value={t.interceptionEnabled} onchange={(v) => tweaks.set('interceptionEnabled', v)} />

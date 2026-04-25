@@ -3,6 +3,10 @@
 		label: string; value?: number; min?: number; max?: number; step?: number;
 		unit?: string; onchange: (v: number) => void;
 	} = $props();
+
+	function handleInput(e: Event) {
+		onchange(Number((e.target as HTMLInputElement).value));
+	}
 </script>
 
 <div class="twk-row">
@@ -12,7 +16,7 @@
 			<span class="twk-val">{value}{unit}</span>
 		{/if}
 	</div>
-	<input type="range" class="twk-slider" {min} {max} {step} {value} oninput={(e) => onchange(Number((e.target as HTMLInputElement).value))} />
+	<input type="range" class="twk-slider" {min} {max} {step} {value} oninput={handleInput} />
 </div>
 
 <style>
