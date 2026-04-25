@@ -5,7 +5,7 @@ let routeId = '';
 export function __setPageState(p: Record<string, string>, u?: URL, r?: string) {
 	params = p;
 	if (u) url = u;
-	if (r) routeId = r;
+	if (r !== undefined) routeId = r;
 }
 
 export const page = {

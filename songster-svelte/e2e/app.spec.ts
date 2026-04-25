@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+async function startGame(page: import('@playwright/test').Page, code = 'E2E') {
+	await page.goto(`/lobby/${code}`);
+	await page.getByRole('button', { name: 'Start Game' }).click();
+	await expect(page).toHaveURL(new RegExp(`/game/${code}`));
+}
+
 test.describe('Home page', () => {
 	test('renders the Wordmark and navigation buttons', async ({ page }) => {
 		await page.goto('/');
@@ -39,15 +45,12 @@ test.describe('Lobby page', () => {
 
 test.describe('Game page', () => {
 	test('renders game chrome with room code', async ({ page }) => {
-		await page.goto('/lobby/E2E');
-		await page.getByRole('button', { name: 'Start Game' }).click();
-		await expect(page).toHaveURL(/\/game\/E2E/);
+		await startGame(page, 'E2E');
 		await expect(page.getByText(/Game · E2E/)).toBeVisible();
 	});
 
 	test('shows player chips for all 4 players', async ({ page }) => {
-		await page.goto('/lobby/E2E');
-		await page.getByRole('button', { name: 'Start Game' }).click();
+		await startGame(page);
 		const playerRail = page.locator('.player-rail');
 		await expect(playerRail.getByText('You')).toBeVisible();
 		await expect(playerRail.getByText('Marlo')).toBeVisible();
@@ -56,23 +59,20 @@ test.describe('Game page', () => {
 	});
 
 	test('displays "Your Timeline" section', async ({ page }) => {
-		await page.goto('/lobby/E2E');
-		await page.getByRole('button', { name: 'Start Game' }).click();
+		await startGame(page);
 		await expect(page.getByText('Your Timeline')).toBeVisible();
 	});
 
 	test('shows vinyl component', async ({ page }) => {
-		await page.goto('/lobby/E2E');
-		await page.getByRole('button', { name: 'Start Game' }).click();
+		await startGame(page);
 		const svg = page.locator('.vinyl-wrap svg');
 		await expect(svg).toBeVisible();
 	});
 
 	test('card can be tapped to start play phase', async ({ page }) => {
-		await page.goto('/lobby/E2E');
-		await page.getByRole('button', { name: 'Start Game' }).click();
+		await startGame(page);
 		await page.getByRole('group', { name: 'Active card' }).getByRole('button').click();
-		await expect(page.getByText(/Listening/)).toBeVisible({ timeout: 3000 });
+		await expect(page.getByText(/Listening/)).toBeVisible();
 	});
 });
 
