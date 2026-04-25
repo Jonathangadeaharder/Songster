@@ -39,4 +39,16 @@ describe('Vinyl', () => {
 		expect(wrap?.getAttribute('style')).toContain('width: 100px');
 		expect(wrap?.getAttribute('style')).toContain('height: 100px');
 	});
+
+	it('clamps animation-duration when intensity is very low', () => {
+		const { container } = render(Vinyl, { props: { spinning: true, intensity: 0.01 } });
+		const svg = container.querySelector('svg');
+		expect(svg?.getAttribute('style')).toContain('animation-duration: 20s');
+	});
+
+	it('computes animation-duration from intensity', () => {
+		const { container } = render(Vinyl, { props: { spinning: true, intensity: 2 } });
+		const svg = container.querySelector('svg');
+		expect(svg?.getAttribute('style')).toContain('animation-duration: 1s');
+	});
 });

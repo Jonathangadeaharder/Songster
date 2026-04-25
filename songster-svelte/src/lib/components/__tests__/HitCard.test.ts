@@ -48,4 +48,31 @@ describe('HitCard', () => {
 		const { getAllByText } = render(HitCard, { props: { song: mockSong, faceDown: false } });
 		expect(getAllByText('Songster').length).toBeGreaterThan(0);
 	});
+
+	it('renders halftone-dots when artStyle is halftone', () => {
+		const { container } = render(HitCard, { props: { song: mockSong, artStyle: 'halftone' } });
+		expect(container.querySelector('.halftone-dots')).toBeInTheDocument();
+	});
+
+	it('renders solid-fill when artStyle is solid', () => {
+		const { container } = render(HitCard, { props: { song: mockSong, artStyle: 'solid' } });
+		expect(container.querySelector('.solid-fill')).toBeInTheDocument();
+	});
+
+	it('renders inverse-fill when artStyle is inverse', () => {
+		const { container } = render(HitCard, { props: { song: mockSong, artStyle: 'inverse' } });
+		expect(container.querySelector('.inverse-fill')).toBeInTheDocument();
+	});
+
+	it('renders with sm size using 70px width', () => {
+		const { container } = render(HitCard, { props: { song: mockSong, size: 'sm' } });
+		const outer = container.querySelector('.card-outer');
+		expect(outer?.getAttribute('style')).toContain('width: 70px');
+	});
+
+	it('renders card-back with number when faceDown', () => {
+		const { container, getByText } = render(HitCard, { props: { song: mockSong, faceDown: true } });
+		expect(container.querySelector('.card-back')).toBeInTheDocument();
+		expect(getByText('No. 01')).toBeInTheDocument();
+	});
 });

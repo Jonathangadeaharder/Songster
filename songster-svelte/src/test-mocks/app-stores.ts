@@ -1,5 +1,11 @@
 import { writable } from 'svelte/store';
 
+const _navigating = writable(null);
+const _updated = writable(false);
+
+export const navigating = _navigating;
+export const updated = _updated;
+
 export const page = writable({
 	params: {},
 	url: new URL('http://localhost:5173'),
@@ -9,12 +15,14 @@ export const page = writable({
 	data: {},
 	form: null,
 	state: {},
-	navigating: null,
-	updated: writable(false),
+	navigating: _navigating,
+	updated: _updated,
 });
-
-export const navigating = writable(null);
-export const updated = writable(false);
 
 export function beforeNavigate(_cb: unknown) {}
 export function afterNavigate(_cb: unknown) {}
+
+export function __resetAppStores() {
+	_navigating.set(null);
+	_updated.set(false);
+}

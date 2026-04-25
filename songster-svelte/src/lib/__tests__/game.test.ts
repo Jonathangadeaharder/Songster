@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('$lib/audio', () => ({
 	playPreview: vi.fn(() => Promise.resolve()),
@@ -9,6 +9,11 @@ vi.mock('$lib/audio', () => ({
 import { get } from 'svelte/store';
 import { game } from '$lib/stores/game';
 import { findCorrectSlot } from '$lib/songs';
+
+afterEach(() => {
+	vi.useRealTimers();
+	vi.restoreAllMocks();
+});
 
 describe('game store — initial state', () => {
 	it('starts in lobby screen', () => {
@@ -85,7 +90,6 @@ describe('game.onPlay', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('place');
-		vi.useRealTimers();
 	});
 });
 
@@ -134,7 +138,6 @@ describe('game.onPlace', () => {
 		const after = get(game.players).find(p => p.id === 'p1')!;
 		expect(after.timeline.length).toBe(me.timeline.length + 1);
 		expect(after.timeline).toContainEqual(card);
-		vi.useRealTimers();
 	});
 });
 
@@ -202,7 +205,6 @@ describe('game.onChallenge', () => {
 		game.onChallenge();
 		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
 		expect(tokensAfter).toBe(tokensBefore);
-		vi.useRealTimers();
 	});
 });
 
@@ -227,7 +229,6 @@ describe('game.runAiTurn', () => {
 		const cleanup = game.runAiTurn();
 		expect(cleanup).toBeTypeOf('function');
 		cleanup?.();
-		vi.useRealTimers();
 	});
 
 	it('AI turn progresses through phases', () => {
@@ -240,7 +241,6 @@ describe('game.runAiTurn', () => {
 		expect(get(game.phase)).toBe('place');
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('reveal');
-		vi.useRealTimers();
 	});
 
 	it('cleanup function cancels pending timers', () => {
@@ -250,6 +250,182 @@ describe('game.runAiTurn', () => {
 		cleanup?.();
 		vi.advanceTimersByTime(4000);
 		expect(get(game.phase)).not.toBe('reveal');
-		vi.useRealTimers();
+	});
+});
+
+describe('game.onPlace — win condition', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('screen stays play when timeline has fewer than 10 cards', () => {
+		vi.useFakeTimers();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		const card = get(game.activeCard)!;
+		const me = get(game.players).find(p => p.id === 'p1')!;
+		const correctSlot = findCorrectSlot(me.timeline, card);
+
+		game.onPlace(correctSlot);
+		expect(get(game.placedResult)).toBe(true);
+		expect(get(game.screen)).toBe('play');
+	});
+
+	it('triggers win when timeline reaches 10 cards', () => {
+		vi.useFakeTimers();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		const card = get(game.activeCard)!;
+		const fakeTimeline = Array.from({ length: 9 }, (_, i) => ({
+			id: `fake-${i}`,
+			num: i,
+			title: `Song ${i}`,
+			artist: 'Artist',
+			year: 1950 + i,
+		}));
+
+		game.players.update(ps =>
+			ps.map(p => (p.id === 'p1' ? { ...p, timeline: fakeTimeline } : p))
+		);
+
+		const me = get(game.players).find(p => p.id === 'p1')!;
+		const correctSlot = findCorrectSlot(me.timeline, card);
+
+		game.onPlace(correctSlot);
+		expect(get(game.placedResult)).toBe(true);
+		expect(get(game.screen)).toBe('play');
+
+		vi.advanceTimersByTime(1300);
+		expect(get(game.screen)).toBe('win');
+		expect(get(game.winner)?.id).toBe('p1');
+	});
+});
+
+describe('game.onChallenge — successful challenge path', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('deducts token and enters challenge phase', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		expect(get(game.phase)).toBe('place');
+		expect(get(game.activePlayerId)).not.toBe('p1');
+
+		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
+		game.onChallenge();
+
+		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
+		expect(tokensAfter).toBe(tokensBefore - 1);
+		expect(get(game.interceptor)).toBe('p1');
+		expect(get(game.phase)).toBe('challenge');
+
+		vi.advanceTimersByTime(1700);
+		expect(get(game.placedResult)).toBe(true);
+		expect(get(game.phase)).toBe('reveal');
+	});
+});
+
+describe('game.onChallenge — guard conditions', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('does nothing when p1 has zero tokens', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		game.players.update(ps =>
+			ps.map(p => (p.id === 'p1' ? { ...p, tokens: 0 } : p))
+		);
+
+		const phaseBefore = get(game.phase);
+		game.onChallenge();
+		expect(get(game.phase)).toBe(phaseBefore);
+		expect(get(game.interceptor)).toBeNull();
+	});
+
+	it('does nothing when activeCard is null', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		game.activeCard.set(null);
+
+		const phaseBefore = get(game.phase);
+		game.onChallenge();
+		expect(get(game.phase)).toBe(phaseBefore);
+		expect(get(game.interceptor)).toBeNull();
+	});
+});
+
+describe('game.runAiTurn — placement outcomes', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('records incorrect placement when AI picks wrong slot', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+
+		const card = get(game.activeCard)!;
+		const aiPlayer = get(game.players).find(p => p.id === get(game.activePlayerId))!;
+		const correct = findCorrectSlot(aiPlayer.timeline, card);
+
+		const wrongSlot = correct === 0 ? 1 : 0;
+
+		const mathSpy = vi.spyOn(Math, 'random');
+		mathSpy.mockReturnValueOnce(0);
+		mathSpy.mockReturnValueOnce(wrongSlot / (aiPlayer.timeline.length + 1));
+
+		game.runAiTurn();
+		vi.advanceTimersByTime(3300);
+
+		expect(get(game.placedResult)).toBe(false);
+		expect(get(game.placedSlot)).toBe(wrongSlot);
+	});
+
+	it('triggers win when AI timeline reaches 10 cards', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+
+		const aiId = get(game.activePlayerId);
+		const card = get(game.activeCard)!;
+		const fakeTimeline = Array.from({ length: 9 }, (_, i) => ({
+			id: `fake-${i}`,
+			num: i,
+			title: `Song ${i}`,
+			artist: 'Artist',
+			year: 1950 + i,
+		}));
+
+		game.players.update(ps =>
+			ps.map(p => (p.id === aiId ? { ...p, timeline: fakeTimeline } : p))
+		);
+
+		const mathSpy = vi.spyOn(Math, 'random');
+		mathSpy.mockReturnValue(0.5);
+
+		game.runAiTurn();
+		vi.advanceTimersByTime(3300);
+
+		expect(get(game.placedResult)).toBe(true);
+
+		vi.advanceTimersByTime(1300);
+		expect(get(game.screen)).toBe('win');
+		expect(get(game.winner)?.id).toBe(aiId);
 	});
 });

@@ -48,4 +48,50 @@ describe('Timeline', () => {
 		await fireEvent.click(slots[2]);
 		expect(onSlotClick).toHaveBeenCalledWith(2);
 	});
+
+	it('invokes onSlotDragOver with correct index', async () => {
+		const onSlotDragOver = vi.fn();
+		const { container } = render(Timeline, {
+			props: { cards: songs, onSlotDragOver, onSlotDrop: vi.fn() },
+		});
+		const slots = container.querySelectorAll('button.slot');
+		await fireEvent.dragOver(slots[1]);
+		expect(onSlotDragOver).toHaveBeenCalledWith(expect.any(Object), 1);
+	});
+
+	it('invokes onSlotDragLeave with correct index', async () => {
+		const onSlotDragLeave = vi.fn();
+		const { container } = render(Timeline, {
+			props: { cards: songs, onSlotDragLeave, onSlotDrop: vi.fn() },
+		});
+		const slots = container.querySelectorAll('button.slot');
+		await fireEvent.dragLeave(slots[0]);
+		expect(onSlotDragLeave).toHaveBeenCalledWith(expect.any(Object), 0);
+	});
+
+	it('invokes onSlotDrop with correct index', async () => {
+		const onSlotDrop = vi.fn();
+		const { container } = render(Timeline, { props: { cards: songs, onSlotDrop } });
+		const slots = container.querySelectorAll('button.slot');
+		await fireEvent.drop(slots[2]);
+		expect(onSlotDrop).toHaveBeenCalledWith(expect.any(Object), 2);
+	});
+
+	it('shows ✕ on wrongSlot', () => {
+		const { container } = render(Timeline, { props: { cards: songs, wrongSlot: 1 } });
+		const slots = container.querySelectorAll('button.slot');
+		expect(slots[1].textContent).toContain('✕');
+	});
+
+	it('shows DROP on hoverSlot', () => {
+		const { container } = render(Timeline, { props: { cards: songs, hoverSlot: 0 } });
+		const slots = container.querySelectorAll('button.slot');
+		expect(slots[0].textContent).toContain('DROP');
+	});
+
+	it('sets correct aria-label on highlightSlot', () => {
+		const { container } = render(Timeline, { props: { cards: songs, highlightSlot: 1 } });
+		const slots = container.querySelectorAll('button.slot');
+		expect(slots[1].getAttribute('aria-label')).toBe('Slot 1, correct placement');
+	});
 });

@@ -64,4 +64,28 @@ describe('tweaks store', () => {
 		tweaks.set('interceptionEnabled', false);
 		expect(get(tweaks).interceptionEnabled).toBe(false);
 	});
+
+	it('handles localStorage.getItem throwing during init', async () => {
+		const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+			throw new DOMException('Security error');
+		});
+		try {
+			const { tweaks } = await import('$lib/stores/tweaks');
+			const val = get(tweaks);
+			expect(val.theme).toBe('light');
+			expect(val.artStyle).toBe('grooves');
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it('handles localStorage.setItem throwing during set()', async () => {
+		const { tweaks } = await import('$lib/stores/tweaks');
+		const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+			throw new DOMException('Quota exceeded');
+		});
+		expect(() => tweaks.set('theme', 'dark')).not.toThrow();
+		expect(get(tweaks).theme).toBe('dark');
+		spy.mockRestore();
+	});
 });

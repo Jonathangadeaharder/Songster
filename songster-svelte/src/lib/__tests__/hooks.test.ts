@@ -2,14 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetUser = vi.fn();
 const mockGetSession = vi.fn();
+let capturedCookieConfig: { getAll: () => any; setAll: (cookies: any[]) => void } | null = null;
 
 vi.mock('@supabase/ssr', () => ({
-	createServerClient: () => ({
-		auth: {
-			getUser: mockGetUser,
-			getSession: mockGetSession,
-		},
-	}),
+	createServerClient: (_url: string, _key: string, config: any) => {
+		capturedCookieConfig = config.cookies;
+		return {
+			auth: {
+				getUser: mockGetUser,
+				getSession: mockGetSession,
+			},
+		};
+	},
 }));
 
 vi.mock('$env/static/public', () => ({
@@ -24,7 +28,7 @@ function makeEvent() {
 	return {
 		cookies: {
 			getAll: () => Object.entries(cookies).map(([name, value]) => ({ name, value })),
-			set: (name: string, value: string) => { cookies[name] = value; },
+			set: vi.fn((name: string, value: string, _opts?: any) => { cookies[name] = value; }),
 		},
 		locals: {} as Record<string, unknown>,
 		resolve: vi.fn(async (evt: any) => new Response('ok')),
@@ -34,6 +38,7 @@ function makeEvent() {
 describe('safeGetSession via handle', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		capturedCookieConfig = null;
 	});
 
 	it('returns null session when getUser returns no user', async () => {
@@ -78,5 +83,39 @@ describe('safeGetSession via handle', () => {
 		await handle({ event, resolve: event.resolve });
 		expect(event.locals.supabase).toBeDefined();
 		expect(event.locals.supabase.auth).toBeDefined();
+	});
+
+	it('setAll callback sets cookies on the event with path "/"', async () => {
+		mockGetUser.mockResolvedValue({ data: { user: null } });
+		const event = makeEvent();
+		await handle({ event, resolve: event.resolve });
+		expect(capturedCookieConfig).not.toBeNull();
+		capturedCookieConfig!.setAll([
+			{ name: 'sb-token', value: 'abc123', options: { httpOnly: true } },
+			{ name: 'sb-refresh', value: 'xyz789', options: {} },
+		]);
+		expect(event.cookies.set).toHaveBeenCalledWith('sb-token', 'abc123', { httpOnly: true, path: '/' });
+		expect(event.cookies.set).toHaveBeenCalledWith('sb-refresh', 'xyz789', { path: '/' });
+	});
+
+	it('setAll callback passes getAll through to event.cookies', async () => {
+		mockGetUser.mockResolvedValue({ data: { user: null } });
+		const event = makeEvent();
+		await handle({ event, resolve: event.resolve });
+		expect(capturedCookieConfig!.getAll()).toEqual([]);
+	});
+
+	it('resolve is called with filterSerializedResponseHeaders', async () => {
+		mockGetUser.mockResolvedValue({ data: { user: null } });
+		const event = makeEvent();
+		await handle({ event, resolve: event.resolve });
+		expect(event.resolve).toHaveBeenCalledWith(event, expect.objectContaining({
+			filterSerializedResponseHeaders: expect.any(Function),
+		}));
+		const callArgs = event.resolve.mock.calls[0];
+		const filter = callArgs[1].filterSerializedResponseHeaders;
+		expect(filter('content-range')).toBe(true);
+		expect(filter('x-other-header')).toBe(false);
+		expect(filter('set-cookie')).toBe(false);
 	});
 });

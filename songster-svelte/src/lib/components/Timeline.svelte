@@ -45,9 +45,9 @@
 				aria-label={slotAriaLabel(i)}
 				disabled={frozen || (!onSlotClick && !onSlotDrop)}
 				onclick={onSlotClick ? () => onSlotClick(i) : undefined}
-				ondragover={onSlotDragOver ? (e: DragEvent) => onSlotDragOver(e, i) : undefined}
-				ondragleave={onSlotDragLeave ? (e: DragEvent) => onSlotDragLeave(e, i) : undefined}
-				ondrop={onSlotDrop ? (e: DragEvent) => onSlotDrop(e, i) : undefined}
+				ondragover={onSlotDragOver ? (e) => onSlotDragOver(e, i) : undefined}
+				ondragleave={onSlotDragLeave ? (e) => onSlotDragLeave(e, i) : undefined}
+				ondrop={onSlotDrop ? (e) => onSlotDrop(e, i) : undefined}
 				style="width: {highlightSlot === i || wrongSlot === i || hoverSlot === i ? cardSize.w + 6 : (draggingActive ? slotW + 8 : slotW)}px; height: {cardSize.h}px"
 			>
 				<div class="slot-inner" style="width: {highlightSlot === i || wrongSlot === i || hoverSlot === i ? cardSize.w : Math.max(slotW - 8, 10)}px; height: {cardSize.h - 8}px; border: 1.5px {hoverSlot === i || highlightSlot === i ? 'solid' : 'dashed'} {wrongSlot === i ? '#0a0a0a' : primary}; background: {highlightSlot === i ? primary : hoverSlot === i ? 'rgba(10,10,10,0.06)' : 'transparent'}; opacity: {highlightSlot === i || wrongSlot === i || hoverSlot === i ? 1 : frozen ? 0.15 : draggingActive ? 0.7 : 0.4}">
