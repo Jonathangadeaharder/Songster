@@ -88,6 +88,7 @@ function onPlace(slot: number) {
 }
 
 function onChallenge() {
+	if (get(phase) !== 'place' || get(activePlayerId) === 'p1') return;
 	const currentPlayers = get(players);
 	const card = get(activeCard);
 	const me = currentPlayers.find(p => p.id === 'p1')!;
