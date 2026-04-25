@@ -71,7 +71,7 @@ test.describe('Game page', () => {
 	test('card can be tapped to start play phase', async ({ page }) => {
 		await page.goto('/lobby/E2E');
 		await page.getByRole('button', { name: 'Start Game' }).click();
-		await page.locator('.card-wrapper button').click();
+		await page.getByRole('group', { name: 'Active card' }).getByRole('button').click();
 		await expect(page.getByText(/Listening/)).toBeVisible({ timeout: 3000 });
 	});
 });

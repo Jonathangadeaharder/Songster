@@ -12,7 +12,7 @@ export default defineConfig({
 		trace: 'on-first-retry',
 	},
 	webServer: {
-		command: 'pnpm build && pnpm preview',
+		command: 'pnpm build && pnpm preview --strictPort',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 	},

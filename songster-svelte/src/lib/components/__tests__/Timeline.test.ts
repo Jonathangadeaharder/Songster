@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { describe, it, expect, vi } from 'vitest';
+import { render, fireEvent } from '@testing-library/svelte';
 import Timeline from '$lib/components/Timeline.svelte';
 import type { Song } from '$lib/types';
 
@@ -39,5 +39,13 @@ describe('Timeline', () => {
 		const { container } = render(Timeline, { props: { cards: [] } });
 		const slots = container.querySelectorAll('button.slot');
 		expect(slots).toHaveLength(1);
+	});
+
+	it('invokes onSlotClick with correct index when slot is clicked', async () => {
+		const onSlotClick = vi.fn();
+		const { container } = render(Timeline, { props: { cards: songs, onSlotClick } });
+		const slots = container.querySelectorAll('button.slot');
+		await fireEvent.click(slots[2]);
+		expect(onSlotClick).toHaveBeenCalledWith(2);
 	});
 });

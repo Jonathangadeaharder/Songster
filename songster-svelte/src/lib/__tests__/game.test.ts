@@ -8,6 +8,7 @@ vi.mock('$lib/audio', () => ({
 
 import { get } from 'svelte/store';
 import { game } from '$lib/stores/game';
+import { findCorrectSlot } from '$lib/songs';
 
 describe('game store — initial state', () => {
 	it('starts in lobby screen', () => {
@@ -122,23 +123,18 @@ describe('game.onPlace', () => {
 	it('adds card to timeline on correct placement', () => {
 		const card = get(game.activeCard)!;
 		const me = get(game.players).find(p => p.id === 'p1')!;
-		const correctSlot = me.timeline.length;
-		for (const s of me.timeline) {
-			if (card.year <= s.year) {
-				break;
-			}
-		}
+		const correctSlot = findCorrectSlot(me.timeline, card);
 
 		vi.useFakeTimers();
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
-		vi.useRealTimers();
 
-		game.onPlace(me.timeline.length);
+		game.onPlace(correctSlot);
+		expect(get(game.placedResult)).toBe(true);
 		const after = get(game.players).find(p => p.id === 'p1')!;
-		if (get(game.placedResult)) {
-			expect(after.timeline.length).toBe(me.timeline.length + 1);
-		}
+		expect(after.timeline.length).toBe(me.timeline.length + 1);
+		expect(after.timeline).toContainEqual(card);
+		vi.useRealTimers();
 	});
 });
 
@@ -189,12 +185,24 @@ describe('game.onChallenge', () => {
 		game.startGame();
 	});
 
-	it('deducts a token from p1 even during draw phase (no phase guard)', () => {
+	it('is blocked during draw phase', () => {
 		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
 		game.onChallenge();
 		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
-		expect(tokensAfter).toBe(tokensBefore - 1);
-		expect(get(game.phase)).toBe('challenge');
+		expect(tokensAfter).toBe(tokensBefore);
+		expect(get(game.phase)).toBe('draw');
+	});
+
+	it('is blocked when activePlayerId is p1', () => {
+		vi.useFakeTimers();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+		expect(get(game.phase)).toBe('place');
+		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
+		game.onChallenge();
+		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
+		expect(tokensAfter).toBe(tokensBefore);
+		vi.useRealTimers();
 	});
 });
 

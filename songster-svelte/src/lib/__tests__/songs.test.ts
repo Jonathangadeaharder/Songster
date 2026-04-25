@@ -41,7 +41,7 @@ describe('shuffled', () => {
 	it('contains the same elements', () => {
 		const input = [1, 2, 3, 4, 5];
 		const result = shuffled(input);
-		expect(result.sort()).toEqual(input.sort());
+		expect([...result].sort()).toEqual([...input].sort());
 	});
 
 	it('does not mutate the original array', () => {
