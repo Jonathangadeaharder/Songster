@@ -38,6 +38,7 @@ function makeEvent() {
 describe('safeGetSession via handle', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		capturedCookieConfig = null;
 	});
 
 	it('returns null session when getUser returns no user', async () => {

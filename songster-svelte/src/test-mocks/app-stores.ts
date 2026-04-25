@@ -21,3 +21,8 @@ export const page = writable({
 
 export function beforeNavigate(_cb: unknown) {}
 export function afterNavigate(_cb: unknown) {}
+
+export function __resetAppStores() {
+	_navigating.set(null);
+	_updated.set(false);
+}

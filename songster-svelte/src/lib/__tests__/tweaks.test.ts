@@ -66,15 +66,17 @@ describe('tweaks store', () => {
 	});
 
 	it('handles localStorage.getItem throwing during init', async () => {
-		const originalGetItem = localStorage.getItem.bind(localStorage);
 		const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
 			throw new DOMException('Security error');
 		});
-		const { tweaks } = await import('$lib/stores/tweaks');
-		const val = get(tweaks);
-		expect(val.theme).toBe('light');
-		expect(val.artStyle).toBe('grooves');
-		spy.mockRestore();
+		try {
+			const { tweaks } = await import('$lib/stores/tweaks');
+			const val = get(tweaks);
+			expect(val.theme).toBe('light');
+			expect(val.artStyle).toBe('grooves');
+		} finally {
+			spy.mockRestore();
+		}
 	});
 
 	it('handles localStorage.setItem throwing during set()', async () => {

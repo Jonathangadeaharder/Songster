@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function startGame(page: import('@playwright/test').Page, code = 'E2E') {
 	await page.goto(`/lobby/${code}`);
 	await page.getByRole('button', { name: 'Start Game' }).click();
-	await expect(page).toHaveURL(new RegExp(`/game/${code}`));
+	await expect(page).toHaveURL((url) => url.pathname === `/game/${code}`);
 }
 
 test.describe('Home page', () => {

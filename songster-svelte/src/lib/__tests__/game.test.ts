@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('$lib/audio', () => ({
 	playPreview: vi.fn(() => Promise.resolve()),
@@ -9,6 +9,11 @@ vi.mock('$lib/audio', () => ({
 import { get } from 'svelte/store';
 import { game } from '$lib/stores/game';
 import { findCorrectSlot } from '$lib/songs';
+
+afterEach(() => {
+	vi.useRealTimers();
+	vi.restoreAllMocks();
+});
 
 describe('game store — initial state', () => {
 	it('starts in lobby screen', () => {
@@ -85,7 +90,6 @@ describe('game.onPlay', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('place');
-		vi.useRealTimers();
 	});
 });
 
@@ -134,7 +138,6 @@ describe('game.onPlace', () => {
 		const after = get(game.players).find(p => p.id === 'p1')!;
 		expect(after.timeline.length).toBe(me.timeline.length + 1);
 		expect(after.timeline).toContainEqual(card);
-		vi.useRealTimers();
 	});
 });
 
@@ -202,7 +205,6 @@ describe('game.onChallenge', () => {
 		game.onChallenge();
 		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
 		expect(tokensAfter).toBe(tokensBefore);
-		vi.useRealTimers();
 	});
 });
 
@@ -227,7 +229,6 @@ describe('game.runAiTurn', () => {
 		const cleanup = game.runAiTurn();
 		expect(cleanup).toBeTypeOf('function');
 		cleanup?.();
-		vi.useRealTimers();
 	});
 
 	it('AI turn progresses through phases', () => {
@@ -240,7 +241,6 @@ describe('game.runAiTurn', () => {
 		expect(get(game.phase)).toBe('place');
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('reveal');
-		vi.useRealTimers();
 	});
 
 	it('cleanup function cancels pending timers', () => {
@@ -250,7 +250,6 @@ describe('game.runAiTurn', () => {
 		cleanup?.();
 		vi.advanceTimersByTime(4000);
 		expect(get(game.phase)).not.toBe('reveal');
-		vi.useRealTimers();
 	});
 });
 
@@ -272,7 +271,6 @@ describe('game.onPlace — win condition', () => {
 		game.onPlace(correctSlot);
 		expect(get(game.placedResult)).toBe(true);
 		expect(get(game.screen)).toBe('play');
-		vi.useRealTimers();
 	});
 
 	it('triggers win when timeline reaches 10 cards', () => {
@@ -303,7 +301,6 @@ describe('game.onPlace — win condition', () => {
 		vi.advanceTimersByTime(1300);
 		expect(get(game.screen)).toBe('win');
 		expect(get(game.winner)?.id).toBe('p1');
-		vi.useRealTimers();
 	});
 });
 
@@ -334,7 +331,6 @@ describe('game.onChallenge — successful challenge path', () => {
 		vi.advanceTimersByTime(1700);
 		expect(get(game.placedResult)).toBe(true);
 		expect(get(game.phase)).toBe('reveal');
-		vi.useRealTimers();
 	});
 });
 
@@ -358,7 +354,6 @@ describe('game.onChallenge — guard conditions', () => {
 		game.onChallenge();
 		expect(get(game.phase)).toBe(phaseBefore);
 		expect(get(game.interceptor)).toBeNull();
-		vi.useRealTimers();
 	});
 
 	it('does nothing when activeCard is null', () => {
@@ -373,7 +368,6 @@ describe('game.onChallenge — guard conditions', () => {
 		game.onChallenge();
 		expect(get(game.phase)).toBe(phaseBefore);
 		expect(get(game.interceptor)).toBeNull();
-		vi.useRealTimers();
 	});
 });
 
@@ -402,9 +396,6 @@ describe('game.runAiTurn — placement outcomes', () => {
 
 		expect(get(game.placedResult)).toBe(false);
 		expect(get(game.placedSlot)).toBe(wrongSlot);
-
-		mathSpy.mockRestore();
-		vi.useRealTimers();
 	});
 
 	it('triggers win when AI timeline reaches 10 cards', () => {
@@ -436,8 +427,5 @@ describe('game.runAiTurn — placement outcomes', () => {
 		vi.advanceTimersByTime(1300);
 		expect(get(game.screen)).toBe('win');
 		expect(get(game.winner)?.id).toBe(aiId);
-
-		mathSpy.mockRestore();
-		vi.useRealTimers();
 	});
 });

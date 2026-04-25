@@ -51,7 +51,9 @@ describe('Timeline', () => {
 
 	it('invokes onSlotDragOver with correct index', async () => {
 		const onSlotDragOver = vi.fn();
-		const { container } = render(Timeline, { props: { cards: songs, onSlotDragOver } });
+		const { container } = render(Timeline, {
+			props: { cards: songs, onSlotDragOver, onSlotDrop: vi.fn() },
+		});
 		const slots = container.querySelectorAll('button.slot');
 		await fireEvent.dragOver(slots[1]);
 		expect(onSlotDragOver).toHaveBeenCalledWith(expect.any(Object), 1);
@@ -59,7 +61,9 @@ describe('Timeline', () => {
 
 	it('invokes onSlotDragLeave with correct index', async () => {
 		const onSlotDragLeave = vi.fn();
-		const { container } = render(Timeline, { props: { cards: songs, onSlotDragLeave } });
+		const { container } = render(Timeline, {
+			props: { cards: songs, onSlotDragLeave, onSlotDrop: vi.fn() },
+		});
 		const slots = container.querySelectorAll('button.slot');
 		await fireEvent.dragLeave(slots[0]);
 		expect(onSlotDragLeave).toHaveBeenCalledWith(expect.any(Object), 0);
