@@ -1,14 +1,31 @@
+# === Dependencies ===
 node_modules/
+
+# === Build outputs ===
 dist/
-.svelte-kit/
-.env*
-*.local
-.DS_Store
-*.pem
 build/
+.svelte-kit/
 .vite/
-Songster.html
+
+# === Secrets & environment ===
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+
+# === OS artefacts ===
+.DS_Store
+Thumbs.db
+
+# === Test / coverage ===
 test-results/
 playwright-report/
 coverage/
 reports/
+
+# === Misc ===
+Songster.html
+
+# === app/ directory (legacy node_modules+dist, do not commit) ===
+app/
