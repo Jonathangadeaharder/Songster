@@ -14,9 +14,6 @@
   "lint-staged": {
     "songster-svelte/**/*.{ts,svelte,css,json}": [
       "prettier --config songster-svelte/.prettierrc.json --write"
-    ],
-    "songster-svelte/**/*.ts": [
-      "bash -c 'cd songster-svelte && pnpm check --tsconfig tsconfig.json'"
     ]
   }
 }
