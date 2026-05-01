@@ -201,7 +201,6 @@ describe('game.onChallenge', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('place');
-<<<<<<< HEAD
 		const tokensBefore = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		game.onChallenge();
 		const tokensAfter = get(game.players).find((p) => p.id === 'p1')!.tokens;
