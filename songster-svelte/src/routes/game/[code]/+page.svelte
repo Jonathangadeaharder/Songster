@@ -24,21 +24,21 @@
 	let { primary, paper } = $derived(colors(t.theme));
 
 	let isDemo = $derived(code === 'DEMO');
-	let activeStore = $derived(isDemo ? game : remoteGame);
 
-	const {
-		round,
-		drawPile,
-		players,
-		activeCard,
-		activePlayerId,
-		phase,
-		placedSlot,
-		placedResult,
-		interceptor,
-		screen: screenStore,
-		dragging,
-	} = activeStore;
+	const g = game;
+	const r = remoteGame;
+
+	let $round = $derived(isDemo ? $g.round : $r.round);
+	let $drawPile = $derived(isDemo ? $g.drawPile : $r.drawPile);
+	let $players = $derived(isDemo ? $g.players : $r.players);
+	let $activeCard = $derived(isDemo ? $g.activeCard : $r.activeCard);
+	let $activePlayerId = $derived(isDemo ? $g.activePlayerId : $r.activePlayerId);
+	let $phase = $derived(isDemo ? $g.phase : $r.phase);
+	let $placedSlot = $derived(isDemo ? $g.placedSlot : $r.placedSlot);
+	let $placedResult = $derived(isDemo ? $g.placedResult : $r.placedResult);
+	let $interceptor = $derived(isDemo ? $g.interceptor : $r.interceptor);
+	let $screenStore = $derived(isDemo ? $g.screen : $r.screen);
+	let $dragging = $derived(isDemo ? $g.dragging : $r.dragging);
 
 	function setTheme(v: string) {
 		tweaks.set('theme', v as Theme);
@@ -56,36 +56,41 @@
 	let activePlayer: Player | undefined = $derived(
 		$players.find((p: Player) => p.id === $activePlayerId)
 	);
-	let myId = $derived(isDemo ? 'p1' : $remoteGame.myPlayerId);
+	let myId = $derived(isDemo ? 'p1' : $r.myPlayerId);
 	let me: Player | undefined = $derived($players.find((p: Player) => p.id === myId));
 	let myTimeline = $derived(me?.timeline ?? []);
 	let myTokens = $derived(me?.tokens ?? 0);
 	let myLength = $derived(me?.timeline.length ?? 0);
 	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === myId);
 
-	onMount(async () => {
+	onMount(() => {
 		if (isDemo) {
 			if ($screenStore === 'lobby') game.startGame();
 			return;
 		}
 
-		try {
-			const room = await getRoomByCode(code);
-			if (!room) return;
-			const playerInfo = await getCurrentPlayer();
-			if (!playerInfo) return;
+		let cancelled = false;
 
-			await remoteGame.connectRemoteGame({
-				roomCode: code,
-				roomId: room.id,
-				myPlayerId: playerInfo.playerId,
-				isHost: room.host_id === playerInfo.userId,
-			});
-		} catch {
-			// Silently fail — will show empty state
-		}
+		(async () => {
+			try {
+				const room = await getRoomByCode(code);
+				if (cancelled || !room) return;
+				const playerInfo = await getCurrentPlayer();
+				if (cancelled || !playerInfo) return;
+
+				await remoteGame.connectRemoteGame({
+					roomCode: code,
+					roomId: room.id,
+					myPlayerId: playerInfo.playerId,
+					isHost: room.host_id === playerInfo.userId,
+				});
+			} catch {
+				// Silently fail — will show empty state
+			}
+		})();
 
 		return () => {
+			cancelled = true;
 			remoteGame.disconnectRemoteGame();
 		};
 	});
@@ -94,12 +99,17 @@
 		$activePlayerId;
 		untrack(() => {
 			if ($phase === 'draw' && $activePlayerId !== myId) {
-				activeStore.runAiTurn();
+				if (isDemo) game.runAiTurn();
+				else remoteGame.runAiTurn();
 			}
 		});
 	});
 
 	let dragSlot = $state<number | null>(null);
+
+	function getStore() {
+		return isDemo ? game : remoteGame;
+	}
 
 	function onCardDragStart(e: DragEvent) {
 		if (!myTurnAndPlacing) {
@@ -108,11 +118,11 @@
 		}
 		e.dataTransfer!.setData('text/plain', 'active-card');
 		e.dataTransfer!.effectAllowed = 'move';
-		activeStore.dragging.set(true);
+		getStore().dragging.set(true);
 	}
 
 	function onCardDragEnd() {
-		activeStore.dragging.set(false);
+		getStore().dragging.set(false);
 		dragSlot = null;
 	}
 
@@ -129,20 +139,20 @@
 	function onSlotDrop(e: DragEvent, i: number) {
 		e.preventDefault();
 		dragSlot = null;
-		activeStore.dragging.set(false);
-		activeStore.onPlace(i);
+		getStore().dragging.set(false);
+		getStore().onPlace(i);
 	}
 
 	function onPlay() {
-		activeStore.onPlay();
+		getStore().onPlay();
 	}
 
 	function onNextTurn() {
-		activeStore.onNextTurn();
+		getStore().onNextTurn();
 	}
 
 	function onChallenge() {
-		activeStore.onChallenge();
+		getStore().onChallenge();
 	}
 </script>
 
@@ -288,7 +298,7 @@
 					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === myId
 						? $placedSlot
 						: null}
-					onSlotClick={myTurnAndPlacing ? (i) => activeStore.onPlace(i) : undefined}
+					onSlotClick={myTurnAndPlacing ? (i) => getStore().onPlace(i) : undefined}
 					onSlotDragOver={myTurnAndPlacing ? (_e, i) => onSlotDragOver(_e, i) : undefined}
 					onSlotDragLeave={myTurnAndPlacing ? (_e, i) => onSlotDragLeave(_e, i) : undefined}
 					onSlotDrop={myTurnAndPlacing ? (_e, i) => onSlotDrop(_e, i) : undefined}

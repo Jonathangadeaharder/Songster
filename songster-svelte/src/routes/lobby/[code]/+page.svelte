@@ -6,52 +6,57 @@
 	import PlayerChip from '$lib/components/PlayerChip.svelte';
 	import { remoteGame } from '$lib/stores/game-remote';
 	import { game } from '$lib/stores/game';
-	import { getRoomByCode, getRoomPlayers, subscribeToRoom, getCurrentPlayer } from '$lib/room';
+	import { getRoomByCode, getRoomPlayers, getCurrentPlayer } from '$lib/room';
 	import type { Player } from '$lib/types';
-	import type { RoomPlayer } from '$lib/room';
 
 	let code: string = $derived(page.params.code ?? '');
 	let isDemo = $derived(code === 'DEMO');
 	let starting = $state(false);
 	let roomId = $state('');
 	let error = $state('');
-	let channel: ReturnType<typeof subscribeToRoom> | null = null;
 
-	let { connected, players: remotePlayers, isHost } = remoteGame;
+	let { connected, players: remotePlayers, isHost, myPlayerId } = remoteGame;
 	let { players: localPlayers } = game;
 
-	onMount(async () => {
+	onMount(() => {
 		if (isDemo) return;
 
-		try {
-			const room = await getRoomByCode(code);
-			if (!room) {
-				error = 'Room not found';
-				return;
-			}
-			if (room.status !== 'waiting') {
-				goto(`/game/${code}`);
-				return;
-			}
-			roomId = room.id;
+		let cancelled = false;
 
-			const playerInfo = await getCurrentPlayer();
-			if (!playerInfo) {
-				error = 'Not in this room';
-				return;
-			}
+		(async () => {
+			try {
+				const room = await getRoomByCode(code);
+				if (cancelled) return;
+				if (!room) {
+					error = 'Room not found';
+					return;
+				}
+				if (room.status !== 'waiting') {
+					goto(`/game/${code}`);
+					return;
+				}
+				roomId = room.id;
 
-			await remoteGame.connectRemoteGame({
-				roomCode: code,
-				roomId: room.id,
-				myPlayerId: playerInfo.playerId,
-				isHost: room.host_id === playerInfo.userId,
-			});
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load room';
-		}
+				const playerInfo = await getCurrentPlayer();
+				if (cancelled) return;
+				if (!playerInfo) {
+					error = 'Not in this room';
+					return;
+				}
+
+				await remoteGame.connectRemoteGame({
+					roomCode: code,
+					roomId: room.id,
+					myPlayerId: playerInfo.playerId,
+					isHost: room.host_id === playerInfo.userId,
+				});
+			} catch (e) {
+				if (!cancelled) error = e instanceof Error ? e.message : 'Failed to load room';
+			}
+		})();
 
 		return () => {
+			cancelled = true;
 			remoteGame.disconnectRemoteGame();
 		};
 	});
@@ -93,7 +98,7 @@
 				{/if}
 				<div class="player-list">
 					{#each $remotePlayers as player}
-						<PlayerChip {player} active={player.id === $remoteGame.myPlayerId} />
+						<PlayerChip {player} active={player.id === $myPlayerId} />
 					{/each}
 				</div>
 			{/if}
