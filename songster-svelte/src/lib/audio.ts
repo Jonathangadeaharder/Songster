@@ -1,55 +1,99 @@
-import type { Song } from '$lib/types';
+import type { Song, Track } from '$lib/types';
 
-const previewUrls = new Map<string, string | null>();
-const inflight = new Map<string, Promise<string | null>>();
+class AudioManager {
+	private audio: HTMLAudioElement | null = null;
+	private abortController: AbortController | null = null;
+	private mobileUnlocked = false;
 
-async function fetchPreviewUrl(song: Song): Promise<string | null> {
-	if (previewUrls.has(song.id)) return previewUrls.get(song.id) ?? null;
-	const existing = inflight.get(song.id);
-	if (existing) return existing;
+	private unlockMobile(): void {
+		if (this.mobileUnlocked) return;
+		this.mobileUnlocked = true;
+	}
 
-	const term = encodeURIComponent(`${song.artist} ${song.title}`);
-	const url = `https://itunes.apple.com/search?term=${term}&limit=1&media=music&entity=song`;
-	const promise = fetch(url)
-		.then(r => r.ok ? r.json() : Promise.reject(new Error(`iTunes ${r.status}`)))
-		.then((data: { results: Array<{ previewUrl?: string }> }) => {
-			const u = data.results?.[0]?.previewUrl ?? null;
-			previewUrls.set(song.id, u);
-			return u;
-		})
-		.catch(() => {
-			inflight.delete(song.id);
-			return null;
-		})
-		.finally(() => inflight.delete(song.id));
-	inflight.set(song.id, promise);
-	return promise;
+	async play(track: Track): Promise<void> {
+		this.stop();
+
+		if (!track.preview_url) return;
+
+		this.unlockMobile();
+
+		this.abortController = new AbortController();
+		const { signal } = this.abortController;
+
+		if (signal.aborted) return;
+
+		this.audio = new Audio(track.preview_url);
+		this.audio.crossOrigin = 'anonymous';
+		this.audio.volume = 0;
+
+		try {
+			await this.audio.play();
+			await this.fadeVolume(this.audio, 0.8, 200);
+		} catch {
+			/* autoplay block or abort */
+		}
+	}
+
+	stop(): void {
+		if (this.abortController) {
+			this.abortController.abort();
+			this.abortController = null;
+		}
+		if (this.audio) {
+			this.audio.pause();
+			this.audio.src = '';
+			this.audio = null;
+		}
+	}
+
+	preload(tracks: Track[]): void {
+		const toPreload = tracks.slice(0, 3);
+		for (const track of toPreload) {
+			if (!track.preview_url) continue;
+			const a = new Audio(track.preview_url);
+			a.preload = 'auto';
+		}
+	}
+
+	private fadeVolume(audio: HTMLAudioElement, target: number, duration: number): Promise<void> {
+		return new Promise((resolve) => {
+			const start = audio.volume;
+			const startTime = performance.now();
+
+			const step = (now: number) => {
+				const elapsed = now - startTime;
+				const t = Math.min(elapsed / duration, 1);
+				audio.volume = start + (target - start) * t;
+				if (t < 1) {
+					requestAnimationFrame(step);
+				} else {
+					resolve();
+				}
+			};
+			requestAnimationFrame(step);
+		});
+	}
 }
 
-let audio: HTMLAudioElement | null = null;
+export const audioManager = new AudioManager();
 
-export async function playPreview(song: Song): Promise<void> {
-	const url = await fetchPreviewUrl(song);
-	stopPreview();
-	if (!url) return;
-	audio = new Audio(url);
-	audio.crossOrigin = 'anonymous';
-	audio.volume = 0.8;
-	try {
-		await audio.play();
-	} catch {
-		/* autoplay block */
-	}
+// Compatibility wrappers for legacy Song-based API
+export function playPreview(song: Song): Promise<void> {
+	const track: Track = {
+		...song,
+		deezer_id: 0,
+		preview_url: '',
+		cover_small: null,
+		cover_medium: null,
+		duration: 30,
+	};
+	return audioManager.play(track);
 }
 
 export function stopPreview(): void {
-	if (audio) {
-		audio.pause();
-		audio.src = '';
-		audio = null;
-	}
+	audioManager.stop();
 }
 
-export function preloadPreviews(songs: Song[]): void {
-	songs.forEach(s => { void fetchPreviewUrl(s); });
+export function preloadPreviews(_songs: Song[]): void {
+	// No-op: static songs don't have preview URLs
 }

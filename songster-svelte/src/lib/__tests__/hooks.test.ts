@@ -1,11 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockGetUser = vi.fn();
 const mockGetSession = vi.fn();
-let capturedCookieConfig: { getAll: () => any; setAll: (cookies: any[]) => void } | null = null;
+let capturedCookieConfig: {
+	getAll: () => Array<{ name: string; value: string }>;
+	setAll: (
+		cookies: Array<{ name: string; value: string; options: Record<string, unknown> }>
+	) => void;
+} | null = null;
 
 vi.mock('@supabase/ssr', () => ({
-	createServerClient: (_url: string, _key: string, config: any) => {
+	createServerClient: (
+		_url: string,
+		_key: string,
+		config: { cookies: typeof capturedCookieConfig }
+	) => {
 		capturedCookieConfig = config.cookies;
 		return {
 			auth: {
@@ -28,10 +37,12 @@ function makeEvent() {
 	return {
 		cookies: {
 			getAll: () => Object.entries(cookies).map(([name, value]) => ({ name, value })),
-			set: vi.fn((name: string, value: string, _opts?: any) => { cookies[name] = value; }),
+			set: vi.fn((name: string, value: string, _opts?: Record<string, unknown>) => {
+				cookies[name] = value;
+			}),
 		},
 		locals: {} as Record<string, unknown>,
-		resolve: vi.fn(async (evt: any) => new Response('ok')),
+		resolve: vi.fn(async (_evt: unknown) => new Response('ok')),
 	} as any;
 }
 
@@ -69,7 +80,9 @@ describe('safeGetSession via handle', () => {
 
 	it('prioritizes getUser over getSession for security', async () => {
 		mockGetUser.mockResolvedValue({ data: { user: null } });
-		mockGetSession.mockResolvedValue({ data: { session: { access_token: 'fake' } } });
+		mockGetSession.mockResolvedValue({
+			data: { session: { access_token: 'fake' } },
+		});
 		const event = makeEvent();
 		await handle({ event, resolve: event.resolve });
 		const result = await (event.locals as any).safeGetSession();
@@ -90,28 +103,36 @@ describe('safeGetSession via handle', () => {
 		const event = makeEvent();
 		await handle({ event, resolve: event.resolve });
 		expect(capturedCookieConfig).not.toBeNull();
-		capturedCookieConfig!.setAll([
+		capturedCookieConfig?.setAll([
 			{ name: 'sb-token', value: 'abc123', options: { httpOnly: true } },
 			{ name: 'sb-refresh', value: 'xyz789', options: {} },
 		]);
-		expect(event.cookies.set).toHaveBeenCalledWith('sb-token', 'abc123', { httpOnly: true, path: '/' });
-		expect(event.cookies.set).toHaveBeenCalledWith('sb-refresh', 'xyz789', { path: '/' });
+		expect(event.cookies.set).toHaveBeenCalledWith('sb-token', 'abc123', {
+			httpOnly: true,
+			path: '/',
+		});
+		expect(event.cookies.set).toHaveBeenCalledWith('sb-refresh', 'xyz789', {
+			path: '/',
+		});
 	});
 
 	it('setAll callback passes getAll through to event.cookies', async () => {
 		mockGetUser.mockResolvedValue({ data: { user: null } });
 		const event = makeEvent();
 		await handle({ event, resolve: event.resolve });
-		expect(capturedCookieConfig!.getAll()).toEqual([]);
+		expect(capturedCookieConfig?.getAll()).toEqual([]);
 	});
 
 	it('resolve is called with filterSerializedResponseHeaders', async () => {
 		mockGetUser.mockResolvedValue({ data: { user: null } });
 		const event = makeEvent();
 		await handle({ event, resolve: event.resolve });
-		expect(event.resolve).toHaveBeenCalledWith(event, expect.objectContaining({
-			filterSerializedResponseHeaders: expect.any(Function),
-		}));
+		expect(event.resolve).toHaveBeenCalledWith(
+			event,
+			expect.objectContaining({
+				filterSerializedResponseHeaders: expect.any(Function),
+			})
+		);
 		const callArgs = event.resolve.mock.calls[0];
 		const filter = callArgs[1].filterSerializedResponseHeaders;
 		expect(filter('content-range')).toBe(true);

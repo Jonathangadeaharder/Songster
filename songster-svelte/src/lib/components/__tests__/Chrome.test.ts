@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { describe, expect, it } from 'vitest';
 import Chrome from '$lib/components/Chrome.svelte';
 
 describe('Chrome', () => {
@@ -55,5 +55,27 @@ describe('Chrome', () => {
 		});
 		const shell = container.querySelector('.shell');
 		expect(shell?.getAttribute('style')).toContain('background: rgb(244, 239, 228)');
+	});
+
+	it('renders right snippet when provided', () => {
+		const { container } = render(Chrome, {
+			props: {
+				title: 'Test',
+				right: (() => document.createElement('button')) as any,
+				children: (() => document.createElement('span')) as any,
+			},
+		});
+		expect(container.querySelector('.chrome-bar')).toBeInTheDocument();
+	});
+
+	it('does not render right section when title is set but right is undefined', () => {
+		const { container } = render(Chrome, {
+			props: {
+				title: 'With Title',
+				children: (() => document.createElement('span')) as any,
+			},
+		});
+		expect(container.querySelector('.chrome-title')).toBeInTheDocument();
+		expect(container.querySelector('.chrome-bar button')).not.toBeInTheDocument();
 	});
 });

@@ -9,9 +9,15 @@ export function __setPageState(p: Record<string, string>, u?: URL, r?: string) {
 }
 
 export const page = {
-	get params() { return params; },
-	get url() { return url; },
-	get route() { return { id: routeId }; },
+	get params() {
+		return params;
+	},
+	get url() {
+		return url;
+	},
+	get route() {
+		return { id: routeId };
+	},
 	status: 200,
 	error: null,
 	data: {},

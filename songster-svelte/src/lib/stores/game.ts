@@ -1,7 +1,13 @@
-import { writable, get } from 'svelte/store';
-import type { Player, Song, Phase, GameState } from '$lib/types';
-import { seededPlayers, buildDrawPile, validatePlacement, findCorrectSlot, SONG_DECK } from '$lib/songs';
-import { playPreview, stopPreview, preloadPreviews } from '$lib/audio';
+import { get, writable } from 'svelte/store';
+import { playPreview, preloadPreviews, stopPreview } from '$lib/audio';
+import {
+	buildDrawPile,
+	findCorrectSlot,
+	SONG_DECK,
+	seededPlayers,
+	validatePlacement,
+} from '$lib/songs';
+import type { Phase, Player, Song } from '$lib/types';
 
 const initialPlayers = seededPlayers();
 const screen = writable<'lobby' | 'play' | 'win'>('lobby');
@@ -61,24 +67,20 @@ function onPlace(slot: number) {
 
 	const currentPlayers = get(players);
 	const currentActiveId = get(activePlayerId);
-	const active = currentPlayers.find(p => p.id === currentActiveId);
+	const active = currentPlayers.find((p) => p.id === currentActiveId);
 	if (!active) return;
 	const ok = validatePlacement(active.timeline, card, slot);
 	placedResult.set(ok);
 
 	if (ok) {
-		const newTimeline = [
-			...active.timeline.slice(0, slot),
-			card,
-			...active.timeline.slice(slot),
-		];
-		const updatedPlayers = currentPlayers.map(p =>
+		const newTimeline = [...active.timeline.slice(0, slot), card, ...active.timeline.slice(slot)];
+		const updatedPlayers = currentPlayers.map((p) =>
 			p.id === currentActiveId ? { ...p, timeline: newTimeline } : p
 		);
 		players.set(updatedPlayers);
 		if (newTimeline.length >= 10) {
 			setTimeout(() => {
-				winner.set(updatedPlayers.find(p => p.id === currentActiveId)!);
+				winner.set(updatedPlayers.find((p) => p.id === currentActiveId)!);
 				screen.set('win');
 			}, 1200);
 		}
@@ -91,12 +93,10 @@ function onChallenge() {
 	if (get(phase) !== 'place' || get(activePlayerId) === 'p1') return;
 	const currentPlayers = get(players);
 	const card = get(activeCard);
-	const me = currentPlayers.find(p => p.id === 'p1')!;
+	const me = currentPlayers.find((p) => p.id === 'p1')!;
 	if (me.tokens <= 0 || !card) return;
 
-	players.set(currentPlayers.map(p =>
-		p.id === 'p1' ? { ...p, tokens: p.tokens - 1 } : p
-	));
+	players.set(currentPlayers.map((p) => (p.id === 'p1' ? { ...p, tokens: p.tokens - 1 } : p)));
 	interceptor.set('p1');
 	phase.set('challenge');
 
@@ -110,13 +110,13 @@ function onChallenge() {
 			card,
 			...me.timeline.slice(correctSlotVal),
 		];
-		const updatedPlayers = get(players).map(p =>
+		const updatedPlayers = get(players).map((p) =>
 			p.id === 'p1' ? { ...p, timeline: newTimeline } : p
 		);
 		players.set(updatedPlayers);
 		if (newTimeline.length >= 10) {
 			setTimeout(() => {
-				winner.set(updatedPlayers.find(p => p.id === 'p1')!);
+				winner.set(updatedPlayers.find((p) => p.id === 'p1')!);
 				screen.set('win');
 			}, 1200);
 		}
@@ -128,11 +128,11 @@ function onChallenge() {
 function onNextTurn() {
 	const currentPlayers = get(players);
 	const currentActiveId = get(activePlayerId);
-	const ids = currentPlayers.map(p => p.id);
+	const ids = currentPlayers.map((p) => p.id);
 	const idx = ids.indexOf(currentActiveId);
 	const nextId = ids[(idx + 1) % ids.length];
 	activePlayerId.set(nextId);
-	round.update(r => r + (nextId === 'p1' ? 1 : 0));
+	round.update((r) => r + (nextId === 'p1' ? 1 : 0));
 	drawNext();
 }
 
@@ -150,7 +150,8 @@ function onReplay() {
 }
 
 function runAiTurn(): (() => void) | undefined {
-	if (get(screen) !== 'play' || get(activePlayerId) === 'p1' || get(phase) !== 'draw') return undefined;
+	if (get(screen) !== 'play' || get(activePlayerId) === 'p1' || get(phase) !== 'draw')
+		return undefined;
 
 	const t1 = setTimeout(() => phase.set('listen'), 700);
 	const t2 = setTimeout(() => phase.set('place'), 1800);
@@ -158,7 +159,7 @@ function runAiTurn(): (() => void) | undefined {
 		const currentPlayers = get(players);
 		const card = get(activeCard);
 		const activeId = get(activePlayerId);
-		const active = currentPlayers.find(p => p.id === activeId);
+		const active = currentPlayers.find((p) => p.id === activeId);
 		if (!active || !card) return;
 
 		const correct = findCorrectSlot(active.timeline, card);
@@ -170,32 +171,51 @@ function runAiTurn(): (() => void) | undefined {
 		placedSlot.set(slot);
 		placedResult.set(ok);
 		if (ok) {
-			players.update(prev => prev.map(p => {
-				if (p.id !== activeId) return p;
-				const newTimeline = [
-					...p.timeline.slice(0, slot),
-					card,
-					...p.timeline.slice(slot),
-				];
-				if (newTimeline.length >= 10) {
-					setTimeout(() => {
-						winner.set({ ...p, timeline: newTimeline });
-						screen.set('win');
-					}, 1200);
-				}
-				return { ...p, timeline: newTimeline };
-			}));
+			players.update((prev) =>
+				prev.map((p) => {
+					if (p.id !== activeId) return p;
+					const newTimeline = [...p.timeline.slice(0, slot), card, ...p.timeline.slice(slot)];
+					if (newTimeline.length >= 10) {
+						setTimeout(() => {
+							winner.set({ ...p, timeline: newTimeline });
+							screen.set('win');
+						}, 1200);
+					}
+					return { ...p, timeline: newTimeline };
+				})
+			);
 		}
 		phase.set('reveal');
 		stopPreview();
 	}, 3200);
 
-	return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+	return () => {
+		clearTimeout(t1);
+		clearTimeout(t2);
+		clearTimeout(t3);
+	};
 }
 
 export const game = {
-	screen, round, players, drawPile, activeCard, activePlayerId,
-	phase, hoverSlot, placedSlot, placedResult, interceptor, winner, dragging,
-	startGame, onPlay, onPlace, onChallenge, onNextTurn, onReplay, runAiTurn,
+	screen,
+	round,
+	players,
+	drawPile,
+	activeCard,
+	activePlayerId,
+	phase,
+	hoverSlot,
+	placedSlot,
+	placedResult,
+	interceptor,
+	winner,
+	dragging,
+	startGame,
+	onPlay,
+	onPlace,
+	onChallenge,
+	onNextTurn,
+	onReplay,
+	runAiTurn,
 	drawNext,
 };

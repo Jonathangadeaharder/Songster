@@ -27,6 +27,7 @@ export default defineConfig({
 				'src/lib/audio.ts',
 				'src/lib/songs.ts',
 				'src/lib/utils.ts',
+				'src/lib/provider/deezer.ts',
 			],
 			thresholds: {
 				statements: 90,

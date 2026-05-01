@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('tweaks store', () => {
 	beforeEach(() => {
@@ -35,10 +35,13 @@ describe('tweaks store', () => {
 	});
 
 	it('loads persisted values on initialization', async () => {
-		localStorage.setItem('songster.tweaks', JSON.stringify({
-			theme: 'dark',
-			animIntensity: 2.0,
-		}));
+		localStorage.setItem(
+			'songster.tweaks',
+			JSON.stringify({
+				theme: 'dark',
+				animIntensity: 2.0,
+			})
+		);
 		const { tweaks } = await import('$lib/stores/tweaks');
 		const val = get(tweaks);
 		expect(val.theme).toBe('dark');
