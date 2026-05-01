@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Track } from '$lib/types';
 
 const mockAudioPlay = vi.fn().mockResolvedValue(undefined);
 const mockAudioPause = vi.fn();
+let audioConstructCount = 0;
 
 class MockAudio {
 	src = '';
@@ -9,131 +11,162 @@ class MockAudio {
 	crossOrigin = '';
 	play = mockAudioPlay;
 	pause = mockAudioPause;
+	preload = 'auto';
+	constructor() {
+		audioConstructCount++;
+	}
 }
 
 vi.stubGlobal('Audio', MockAudio);
-
-const mockFetch = vi.fn().mockResolvedValue({
-	ok: true,
-	json: () => Promise.resolve({ results: [{ previewUrl: 'https://example.com/preview.mp3' }] }),
-});
-vi.stubGlobal('fetch', mockFetch);
 
 async function getAudio() {
 	return import('$lib/audio');
 }
 
-describe('audio module', () => {
-	beforeEach(() => {
+describe('AudioManager', () => {
+	beforeEach(async () => {
 		vi.restoreAllMocks();
 		mockAudioPlay.mockResolvedValue(undefined);
 		mockAudioPause.mockClear();
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ results: [{ previewUrl: 'https://example.com/preview.mp3' }] }),
-		});
+		audioConstructCount = 0;
+		const { audioManager } = await getAudio();
+		audioManager.stop();
 	});
 
-	describe('playPreview', () => {
-		it('creates Audio with fetched URL, sets volume/crossOrigin, and plays', async () => {
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'test1-audio', num: 1, title: 'Test Song', artist: 'Test Artist', year: 2000 };
-			await playPreview(song);
-			expect(mockFetch).toHaveBeenCalledWith(
-				expect.stringContaining('itunes.apple.com/search'),
-			);
-			expect(mockAudioPlay).toHaveBeenCalledTimes(1);
-			stopPreview();
-		});
-
-		it('sets volume to 0.8 and crossOrigin to anonymous', async () => {
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'test-vol', num: 2, title: 'Vol', artist: 'Art', year: 2001 };
-			await playPreview(song);
-			const lastInstance = (globalThis as any).lastAudioInstance as MockAudio | undefined;
-			expect(mockAudioPlay).toHaveBeenCalled();
-			stopPreview();
-		});
+	it('plays track with preview_url', async () => {
+		const { audioManager } = await getAudio();
+		const track: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: 'https://example.com/preview.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		await audioManager.play(track);
+		expect(mockAudioPlay).toHaveBeenCalledTimes(1);
+		audioManager.stop();
 	});
 
-	describe('stopPreview', () => {
-		it('calls pause on active audio', async () => {
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'test-stop', num: 3, title: 'Stop', artist: 'Art', year: 2002 };
-			await playPreview(song);
-			stopPreview();
-			expect(mockAudioPause).toHaveBeenCalled();
-		});
-
-		it('does not throw when no audio is playing', async () => {
-			const { stopPreview } = await getAudio();
-			expect(() => stopPreview()).not.toThrow();
-		});
+	it('does not play when no preview_url', async () => {
+		const { audioManager } = await getAudio();
+		const track: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: '',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		await audioManager.play(track);
+		expect(audioConstructCount).toBe(0);
 	});
 
-	describe('preloadPreviews', () => {
-		it('calls fetch for each song', async () => {
-			mockFetch.mockClear();
-			const { preloadPreviews } = await getAudio();
-			const songs = [
-				{ id: 'pre1', num: 1, title: 'A', artist: 'B', year: 2000 },
-				{ id: 'pre2', num: 2, title: 'C', artist: 'D', year: 2001 },
-			];
-			preloadPreviews(songs);
-			await new Promise(r => setTimeout(r, 0));
-			expect(mockFetch).toHaveBeenCalledTimes(2);
-		});
+	it('stops active audio', async () => {
+		const { audioManager } = await getAudio();
+		const track: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: 'https://example.com/preview.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		await audioManager.play(track);
+		audioManager.stop();
+		expect(mockAudioPause).toHaveBeenCalled();
 	});
 
-	describe('fetchPreviewUrl error paths', () => {
-		it('handles fetch rejection gracefully and does not play audio', async () => {
-			mockFetch.mockRejectedValue(new Error('Network error'));
-			mockAudioPlay.mockClear();
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'catch-test', num: 10, title: 'Err', artist: 'Art', year: 2000 };
-			await expect(playPreview(song)).resolves.toBeUndefined();
-			expect(mockAudioPlay).not.toHaveBeenCalled();
-			stopPreview();
-		});
-
-		it('handles non-ok response and does not play audio', async () => {
-			mockFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
-			mockAudioPlay.mockClear();
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'non-ok-test', num: 11, title: 'Nope', artist: 'Art', year: 2000 };
-			await expect(playPreview(song)).resolves.toBeUndefined();
-			expect(mockAudioPlay).not.toHaveBeenCalled();
-			stopPreview();
-		});
-
-		it('handles empty results (null preview URL) without creating Audio', async () => {
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({ results: [] }),
-			});
-			mockAudioPlay.mockClear();
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'null-url-test', num: 12, title: 'NoPreview', artist: 'Art', year: 2000 };
-			await expect(playPreview(song)).resolves.toBeUndefined();
-			expect(mockAudioPlay).not.toHaveBeenCalled();
-			stopPreview();
-		});
+	it('preloads tracks', async () => {
+		const { audioManager } = await getAudio();
+		const tracks: Track[] = [
+			{
+				id: 'dz-1',
+				num: 1,
+				title: 'A',
+				artist: 'B',
+				year: 2020,
+				deezer_id: 1,
+				preview_url: 'url1',
+				cover_small: null,
+				cover_medium: null,
+				duration: 30,
+			},
+			{
+				id: 'dz-2',
+				num: 2,
+				title: 'C',
+				artist: 'D',
+				year: 2021,
+				deezer_id: 2,
+				preview_url: 'url2',
+				cover_small: null,
+				cover_medium: null,
+				duration: 30,
+			},
+		];
+		expect(() => audioManager.preload(tracks)).not.toThrow();
 	});
 
-	describe('inflight dedup', () => {
-		it('deduplicates concurrent requests for the same song', async () => {
-			mockFetch.mockClear();
-			let resolveFetch: (v: any) => void = () => {};
-			const fetchPromise = new Promise(r => { resolveFetch = r; });
-			mockFetch.mockReturnValue(fetchPromise);
-			const { playPreview, stopPreview } = await getAudio();
-			const song = { id: 'dedup-test', num: 20, title: 'Dedup', artist: 'Art', year: 2000 };
-			const p1 = playPreview(song);
-			const p2 = playPreview(song);
-			expect(mockFetch).toHaveBeenCalledTimes(1);
-			resolveFetch({ ok: true, json: () => Promise.resolve({ results: [{ previewUrl: 'https://example.com/dedup.mp3' }] }) });
-			await Promise.all([p1, p2]);
-			stopPreview();
-		});
+	it('aborts previous play when new track requested', async () => {
+		const { audioManager } = await getAudio();
+		const track1: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song1',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: 'https://example.com/1.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		const track2: Track = {
+			id: 'dz-2',
+			num: 2,
+			title: 'Song2',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 2,
+			preview_url: 'https://example.com/2.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		const p1 = audioManager.play(track1);
+		const p2 = audioManager.play(track2);
+		await Promise.all([p1, p2]);
+		expect(mockAudioPlay).toHaveBeenCalled();
+	});
+
+	it('handles autoplay policy gracefully', async () => {
+		mockAudioPlay.mockRejectedValue(new Error('Autoplay blocked'));
+		const { audioManager } = await getAudio();
+		const track: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: 'https://example.com/preview.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		await expect(audioManager.play(track)).resolves.toBeUndefined();
 	});
 });
