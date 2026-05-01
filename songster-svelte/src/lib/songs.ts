@@ -1,4 +1,4 @@
-import type { Song, Player } from './types';
+import type { Song, Track, Player } from './types';
 
 export const SONG_DECK: Song[] = [
 	{ id: 's01', num: 1, title: 'Bohemian Rhapsody', artist: 'Queen', year: 1975 },
@@ -55,6 +55,16 @@ export function seededPlayers(): Player[] {
 export function buildDrawPile(players: Player[]): Song[] {
 	const used = new Set(players.flatMap((p) => p.timeline.map((s) => s.id)));
 	return shuffled(SONG_DECK.filter((s) => !used.has(s.id)));
+}
+
+export function trackToSong(track: Track): Song {
+	return {
+		id: track.id,
+		num: track.num,
+		title: track.title,
+		artist: track.artist,
+		year: track.year,
+	};
 }
 
 export function validatePlacement(timeline: Song[], card: Song, slot: number): boolean {
