@@ -2,27 +2,31 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      - PUBLIC_SUPABASE_URL=http://kong:8000
+      - PUBLIC_SUPABASE_URL=http://localhost:8000
       - PUBLIC_SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
-      - kong
+      kong:
+        condition: service_started
+      supabase-auth:
+        condition: service_started
 
   supabase-db:
     image: supabase/postgres:15.1.0.117
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-postgres-password}
     volumes:
       - supabase-db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   supabase-auth:
     image: supabase/gotrue:v2.132.3
@@ -30,10 +34,12 @@ services:
       supabase-db:
         condition: service_healthy
     environment:
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-your-super-secret-postgres-password}@supabase-db:5432/postgres
       GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET}
+      GOTRUE_JWT_SECRET: ${GOTRUE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
       GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+      GOTRUE_MAILER_AUTOCONFIRM: true
+      GOTRUE_API_PORT: '9999'
 
   supabase-realtime:
     image: supabase/realtime:v2.15.0
@@ -42,21 +48,37 @@ services:
         condition: service_healthy
     environment:
       DB_HOST: supabase-db
-      DB_PORT: 5432
+      DB_PORT: '5432'
       DB_USER: supabase_admin
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-postgres-password}
       DB_NAME: postgres
-      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE}
+      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE:-your-super-secret-realtime-key-base-with-at-least-64-chars}
+      PORT: '4000'
+
+  supabase-rest:
+    image: postgrest/postgrest:v12.0.1
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-your-super-secret-postgres-password}@supabase-db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${GOTRUE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
 
   kong:
     image: kong:2.8.1
     ports:
-      - "8000:8000"
+      - '8000:8000'
     environment:
-      KONG_DATABASE: "off"
+      KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
     volumes:
       - ./kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      - supabase-auth
+      - supabase-realtime
+      - supabase-rest
 
 volumes:
   supabase-db-data:
