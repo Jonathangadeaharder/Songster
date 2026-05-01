@@ -17,11 +17,14 @@
 	import TweakRadio from '$lib/components/TweakRadio.svelte';
 	import TweakSlider from '$lib/components/TweakSlider.svelte';
 	import TweakToggle from '$lib/components/TweakToggle.svelte';
-	import { getRoomByCode, getCurrentPlayerInRoom } from '$lib/room';
+	import { getRoomByCode, getCurrentPlayerInRoom, addSpectator } from '$lib/room';
+	import GameStats from '$lib/components/GameStats.svelte';
+	import { supabase } from '$lib/supabase';
 
 	let code: string = $derived(page.params.code ?? '');
 	let t = $derived($tweaks);
 	let { primary, paper } = $derived(colors(t.theme));
+	let isSpectator = $derived(page.url.searchParams.get('spectate') === 'true');
 
 	import { derived, writable } from 'svelte/store';
 	import type { Writable, Readable } from 'svelte/store';
@@ -91,15 +94,33 @@
 			try {
 				const room = await getRoomByCode(code);
 				if (cancelled || !room) return;
-				const playerInfo = await getCurrentPlayerInRoom(room.id);
-				if (cancelled || !playerInfo) return;
 
-				await remoteGame.connectRemoteGame({
-					roomCode: code,
-					roomId: room.id,
-					myPlayerId: playerInfo.playerId,
-					isHost: room.host_id === playerInfo.userId,
-				});
+				if (isSpectator) {
+					// Spectator: connect without player ID
+					await remoteGame.connectRemoteGame({
+						roomCode: code,
+						roomId: room.id,
+						myPlayerId: '',
+						isHost: false,
+					});
+					// Register as spectator
+					const {
+						data: { user },
+					} = await supabase.auth.getUser();
+					if (user) {
+						await addSpectator(room.id, user.id);
+					}
+				} else {
+					const playerInfo = await getCurrentPlayerInRoom(room.id);
+					if (cancelled || !playerInfo) return;
+
+					await remoteGame.connectRemoteGame({
+						roomCode: code,
+						roomId: room.id,
+						myPlayerId: playerInfo.playerId,
+						isHost: room.host_id === playerInfo.userId,
+					});
+				}
 			} catch {
 				// Silently fail — will show empty state
 			}
@@ -128,7 +149,7 @@
 	}
 
 	function onCardDragStart(e: DragEvent) {
-		if (!myTurnAndPlacing) {
+		if (isSpectator || !myTurnAndPlacing) {
 			e.preventDefault();
 			return;
 		}
@@ -153,6 +174,7 @@
 	}
 
 	function onSlotDrop(e: DragEvent, i: number) {
+		if (isSpectator) return;
 		e.preventDefault();
 		dragSlot = null;
 		getStore().dragging.set(false);
@@ -160,14 +182,17 @@
 	}
 
 	function onPlay() {
+		if (isSpectator) return;
 		getStore().onPlay();
 	}
 
 	function onNextTurn() {
+		if (isSpectator) return;
 		getStore().onNextTurn();
 	}
 
 	function onChallenge() {
+		if (isSpectator) return;
 		getStore().onChallenge();
 	}
 </script>
@@ -176,7 +201,11 @@
 	<Chrome theme={t.theme} title="Game · {code} · Songster">
 		{#snippet right()}
 			<div class="turn-label">
-				<span style="opacity: 0.6">TURN</span>
+				{#if isSpectator}
+					<span style="opacity: 0.6">SPECTATING</span>
+				{:else}
+					<span style="opacity: 0.6">TURN</span>
+				{/if}
 				<span>{activePlayer?.name}</span>
 			</div>
 		{/snippet}
@@ -187,6 +216,14 @@
 					<PlayerChip {player} active={player.id === $activePlayerId} theme={t.theme} />
 				{/each}
 			</div>
+
+			<GameStats
+				drawPileCount={$drawPile.length}
+				round={$round}
+				players={$players}
+				activePlayerId={$activePlayerId}
+				startTime={null}
+			/>
 
 			<div class="vinyl-section">
 				<Vinyl
@@ -218,9 +255,13 @@
 					{:else if $phase === 'listen'}
 						Listening · 0:30 preview
 					{:else if $phase === 'place'}
-						{$activePlayerId === $myPlayerId
-							? 'Drag the card onto your timeline'
-							: `${activePlayer?.name} is placing…`}
+						{#if isSpectator}
+							{`${activePlayer?.name} is placing…`}
+						{:else}
+							{$activePlayerId === $myPlayerId
+								? 'Drag the card onto your timeline'
+								: `${activePlayer?.name} is placing…`}
+						{/if}
 					{:else if $phase === 'reveal'}
 						{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
 					{:else if $phase === 'challenge'}
@@ -235,14 +276,16 @@
 						class="card-wrapper"
 						role="group"
 						aria-label="Active card"
-						draggable={myTurnAndPlacing ? 'true' : undefined}
+						draggable={isSpectator ? undefined : myTurnAndPlacing ? 'true' : undefined}
 						ondragstart={onCardDragStart}
 						ondragend={onCardDragEnd}
-						style="cursor: {myTurnAndPlacing
-							? 'grab'
-							: $phase === 'draw' && $activePlayerId === $myPlayerId
-								? 'pointer'
-								: 'default'}; opacity: {$dragging ? 0.3 : 1}"
+						style="cursor: {isSpectator
+							? 'default'
+							: myTurnAndPlacing
+								? 'grab'
+								: $phase === 'draw' && $activePlayerId === $myPlayerId
+									? 'pointer'
+									: 'default'}; opacity: {$dragging ? 0.3 : 1}"
 					>
 						<button
 							onclick={$phase === 'draw' && $activePlayerId === $myPlayerId ? onPlay : undefined}
@@ -273,7 +316,7 @@
 				{/if}
 			</div>
 
-			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
+			{#if !isSpectator && t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
 				<div class="challenge-bar">
 					<div>
 						<div class="challenge-label">Challenge</div>
@@ -321,15 +364,17 @@
 				/>
 
 				{#if $phase === 'reveal'}
-					<div class="next-btn-wrap">
-						<button
-							class="next-btn"
-							style="background: {primary}; color: {paper}"
-							onclick={onNextTurn}
-						>
-							Side B · Next Turn →
-						</button>
-					</div>
+					{#if !isSpectator}
+						<div class="next-btn-wrap">
+							<button
+								class="next-btn"
+								style="background: {primary}; color: {paper}"
+								onclick={onNextTurn}
+							>
+								Side B · Next Turn →
+							</button>
+						</div>
+					{/if}
 				{:else}
 					<div style="height: 16px"></div>
 				{/if}
