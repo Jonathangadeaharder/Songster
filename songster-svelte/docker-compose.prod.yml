@@ -1,0 +1,95 @@
+# Production overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Requires a .env file with all secrets populated.
+
+services:
+  app:
+    restart: unless-stopped
+    ports: [] # Remove exposed ports — only internal network
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  supabase-db:
+    restart: unless-stopped
+    ports: [] # Do not expose Postgres in production
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+
+  supabase-auth:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  supabase-realtime:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  supabase-rest:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  kong:
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # API gateway — only port exposed externally
+    networks:
+      - songster-internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+networks:
+  songster-internal:
+    driver: bridge
+
+volumes:
+  supabase-db-data:
+    driver: local
