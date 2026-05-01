@@ -11,6 +11,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (isPlaceholder) {
 		// CI / E2E mode: skip real Supabase auth and provide a dummy session so
 		// server-side route guards pass without redirecting to /auth/login.
+		event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			cookies: {
+				getAll: () => event.cookies.getAll(),
+				setAll: (
+					cookies: {
+						name: string;
+						value: string;
+						options: Record<string, unknown>;
+					}[]
+				) => {
+					for (const { name, value, options } of cookies) {
+						event.cookies.set(name, value, { ...options, path: '/' });
+					}
+				},
+			},
+		});
 		event.locals.safeGetSession = async () => ({
 			session: {
 				user: { id: '00000000-0000-0000-0000-000000000000' },

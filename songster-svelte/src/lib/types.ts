@@ -26,6 +26,7 @@ export interface DeezerTrackData {
 	album?: { cover_small?: string; cover_medium?: string; title?: string };
 	preview?: string;
 	duration?: number;
+	release_date?: string;
 }
 
 export interface MusicProvider {
