@@ -23,22 +23,38 @@
 	let t = $derived($tweaks);
 	let { primary, paper } = $derived(colors(t.theme));
 
+	import { derived, writable } from 'svelte/store';
+	import type { Writable, Readable } from 'svelte/store';
+
 	let isDemo = $derived(code === 'DEMO');
+	const mode = writable<'demo' | 'remote'>('demo');
+	$effect(() => {
+		mode.set(isDemo ? 'demo' : 'remote');
+	});
 
-	const g = game;
-	const r = remoteGame;
+	function proxy<T>(demo: Writable<T>, remote: Writable<T>): Readable<T> {
+		return derived([demo, remote, mode], ([d, r, m]) => (m === 'demo' ? d : r));
+	}
 
-	let $round = $derived(isDemo ? $g.round : $r.round);
-	let $drawPile = $derived(isDemo ? $g.drawPile : $r.drawPile);
-	let $players = $derived(isDemo ? $g.players : $r.players);
-	let $activeCard = $derived(isDemo ? $g.activeCard : $r.activeCard);
-	let $activePlayerId = $derived(isDemo ? $g.activePlayerId : $r.activePlayerId);
-	let $phase = $derived(isDemo ? $g.phase : $r.phase);
-	let $placedSlot = $derived(isDemo ? $g.placedSlot : $r.placedSlot);
-	let $placedResult = $derived(isDemo ? $g.placedResult : $r.placedResult);
-	let $interceptor = $derived(isDemo ? $g.interceptor : $r.interceptor);
-	let $screenStore = $derived(isDemo ? $g.screen : $r.screen);
-	let $dragging = $derived(isDemo ? $g.dragging : $r.dragging);
+	function proxyConst<T>(demo: T, remote: Writable<T>): Readable<T> {
+		return derived([remote, mode], ([r, m]) => (m === 'demo' ? demo : r));
+	}
+
+	const round = proxy(game.round, remoteGame.round);
+	const drawPile = proxy(game.drawPile, remoteGame.drawPile);
+	const players = proxy(game.players, remoteGame.players);
+	const activeCard = proxy(game.activeCard, remoteGame.activeCard);
+	const activePlayerId = proxy(game.activePlayerId, remoteGame.activePlayerId);
+	const phase = proxy(game.phase, remoteGame.phase);
+	const placedSlot = proxy(game.placedSlot, remoteGame.placedSlot);
+	const placedResult = proxy(game.placedResult, remoteGame.placedResult);
+	const interceptor = proxy(game.interceptor, remoteGame.interceptor);
+	const screenStore = proxy(game.screen, remoteGame.screen);
+	const dragging = proxy(game.dragging, remoteGame.dragging);
+
+	const myPlayerId = proxyConst('p1', remoteGame.myPlayerId);
+	const isHost = proxyConst(false, remoteGame.isHost);
+	const connected = proxyConst(false, remoteGame.connected);
 
 	function setTheme(v: string) {
 		tweaks.set('theme', v as Theme);
@@ -56,12 +72,11 @@
 	let activePlayer: Player | undefined = $derived(
 		$players.find((p: Player) => p.id === $activePlayerId)
 	);
-	let myId = $derived(isDemo ? 'p1' : $r.myPlayerId);
-	let me: Player | undefined = $derived($players.find((p: Player) => p.id === myId));
+	let me: Player | undefined = $derived($players.find((p: Player) => p.id === $myPlayerId));
 	let myTimeline = $derived(me?.timeline ?? []);
 	let myTokens = $derived(me?.tokens ?? 0);
 	let myLength = $derived(me?.timeline.length ?? 0);
-	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === myId);
+	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === $myPlayerId);
 
 	onMount(() => {
 		if (isDemo) {
@@ -98,7 +113,7 @@
 	$effect(() => {
 		$activePlayerId;
 		untrack(() => {
-			if ($phase === 'draw' && $activePlayerId !== myId) {
+			if ($phase === 'draw' && $activePlayerId !== $myPlayerId) {
 				if (isDemo) game.runAiTurn();
 				else remoteGame.runAiTurn();
 			}
@@ -202,7 +217,7 @@
 					{:else if $phase === 'listen'}
 						Listening · 0:30 preview
 					{:else if $phase === 'place'}
-						{$activePlayerId === myId
+						{$activePlayerId === $myPlayerId
 							? 'Drag the card onto your timeline'
 							: `${activePlayer?.name} is placing…`}
 					{:else if $phase === 'reveal'}
@@ -224,12 +239,12 @@
 						ondragend={onCardDragEnd}
 						style="cursor: {myTurnAndPlacing
 							? 'grab'
-							: $phase === 'draw' && $activePlayerId === myId
+							: $phase === 'draw' && $activePlayerId === $myPlayerId
 								? 'pointer'
 								: 'default'}; opacity: {$dragging ? 0.3 : 1}"
 					>
 						<button
-							onclick={$phase === 'draw' && $activePlayerId === myId ? onPlay : undefined}
+							onclick={$phase === 'draw' && $activePlayerId === $myPlayerId ? onPlay : undefined}
 							style="background: none; border: none; padding: 0; pointer-events: {myTurnAndPlacing
 								? 'none'
 								: 'auto'}"
@@ -257,7 +272,7 @@
 				{/if}
 			</div>
 
-			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== myId}
+			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
 				<div class="challenge-bar">
 					<div>
 						<div class="challenge-label">Challenge</div>
@@ -292,10 +307,10 @@
 					frozen={!myTurnAndPlacing}
 					draggingActive={myTurnAndPlacing}
 					hoverSlot={dragSlot}
-					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === myId
+					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === $myPlayerId
 						? $placedSlot
 						: null}
-					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === myId
+					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === $myPlayerId
 						? $placedSlot
 						: null}
 					onSlotClick={myTurnAndPlacing ? (i) => getStore().onPlace(i) : undefined}
