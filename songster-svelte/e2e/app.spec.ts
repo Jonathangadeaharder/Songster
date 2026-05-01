@@ -11,22 +11,25 @@ test.describe('Home page', () => {
 		await page.goto('/');
 		await expect(page.getByText('Songster').first()).toBeVisible();
 		await expect(page.getByText('Music trivia timeline game')).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Create Room' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Join Room' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Create Room' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Join Room' })).toBeVisible();
+		await expect(page.getByRole('link', { name: /play solo/i })).toBeVisible();
 	});
 
 	test('Create Room button navigates to lobby after filling name', async ({ page }) => {
 		await page.goto('/');
-		await page.getByPlaceholder('Your name').fill('Alice');
-		await page.getByRole('button', { name: 'Create Room' }).click();
+		const createForm = page.locator('form').filter({ hasText: 'Create Room' });
+		await createForm.getByPlaceholder('Your name').fill('Alice');
+		await createForm.getByRole('button', { name: 'Create Room' }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 
 	test('Join Room button navigates to lobby after filling fields', async ({ page }) => {
 		await page.goto('/');
-		await page.getByPlaceholder('Room code').fill('ABC123');
-		await page.getByPlaceholder('Your name').nth(1).fill('Bob');
-		await page.getByRole('button', { name: 'Join Room' }).click();
+		const joinForm = page.locator('form').filter({ hasText: 'Join Room' });
+		await joinForm.getByPlaceholder('Room code').fill('ABC123');
+		await joinForm.getByPlaceholder('Your name').fill('Bob');
+		await joinForm.getByRole('button', { name: 'Join Room' }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 
