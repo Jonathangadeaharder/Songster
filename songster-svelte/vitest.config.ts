@@ -27,11 +27,6 @@ export default defineConfig({
 				'src/lib/audio.ts',
 				'src/lib/songs.ts',
 				'src/lib/utils.ts',
-				'src/lib/components/Chrome.svelte',
-				'src/lib/components/HitCard.svelte',
-				'src/lib/components/PlayerChip.svelte',
-				'src/lib/components/Timeline.svelte',
-				'src/lib/components/Vinyl.svelte',
 			],
 			thresholds: {
 				statements: 90,

@@ -1,0 +1,11 @@
+# Generated / vendored
+.svelte-kit/
+build/
+node_modules/
+pnpm-lock.yaml
+
+# Static assets
+static/
+
+# Supabase migrations (preserve exact SQL formatting)
+supabase/migrations/
