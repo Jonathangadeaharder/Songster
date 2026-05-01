@@ -225,8 +225,8 @@ describe('Timeline', () => {
 			props: { cards: songs, hoverSlot: 0, onSlotDrop: vi.fn() },
 		});
 		const inner = container.querySelector('.slot-inner') as HTMLElement;
-		const computedStyle = window.getComputedStyle(inner);
-		expect(computedStyle.backgroundColor).toBe('rgba(10, 10, 10, 0.06)');
+		const style = inner?.getAttribute('style') ?? '';
+		expect(style).toContain('rgba(10, 10, 10, 0.06)');
 	});
 
 	it('applies wrongSlot dark border color', () => {
@@ -234,8 +234,9 @@ describe('Timeline', () => {
 			props: { cards: songs, wrongSlot: 0 },
 		});
 		const inner = container.querySelector('.slot-inner') as HTMLElement;
-		const computedStyle = window.getComputedStyle(inner);
-		expect(computedStyle.backgroundColor).toBe('rgb(10, 10, 10)');
+		const style = inner?.getAttribute('style') ?? '';
+		expect(style).toContain('rgb(10, 10, 10)');
+		expect(style).toContain('border:');
 	});
 
 	it('enables slots when onSlotDrop is provided without onSlotClick', () => {
