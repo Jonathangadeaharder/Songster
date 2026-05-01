@@ -15,15 +15,24 @@ test.describe('Home page', () => {
 		await expect(page.getByRole('link', { name: 'Join Room' })).toBeVisible();
 	});
 
-	test('Create Room link navigates to lobby', async ({ page }) => {
+	test('Create Room button navigates to lobby after filling name', async ({ page }) => {
 		await page.goto('/');
-		await page.getByRole('link', { name: 'Create Room' }).click();
+		await page.getByPlaceholder('Your name').fill('Alice');
+		await page.getByRole('button', { name: 'Create Room' }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 
-	test('Join Room link navigates to lobby', async ({ page }) => {
+	test('Join Room button navigates to lobby after filling fields', async ({ page }) => {
 		await page.goto('/');
-		await page.getByRole('link', { name: 'Join Room' }).click();
+		await page.getByPlaceholder('Room code').fill('ABC123');
+		await page.getByPlaceholder('Your name').nth(1).fill('Bob');
+		await page.getByRole('button', { name: 'Join Room' }).click();
+		await expect(page).toHaveURL(/\/lobby\/DEMO/);
+	});
+
+	test('Solo play link navigates to lobby', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: /play solo/i }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 });
