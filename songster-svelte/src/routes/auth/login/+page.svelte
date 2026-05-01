@@ -11,7 +11,11 @@
 	/** Destination to return to after auth (from route guard redirect). */
 	const redirectTo: string = $derived(
 		typeof page.url?.searchParams?.get === 'function'
-			? (page.url.searchParams.get('redirectTo') ?? '/')
+			? (() => {
+					const raw = page.url.searchParams.get('redirectTo') ?? '/';
+					const isInternal = raw.startsWith('/') && !raw.startsWith('//');
+					return isInternal ? raw : '/';
+				})()
 			: '/'
 	);
 
@@ -49,6 +53,7 @@
 	async function handleGuest() {
 		loading = true;
 		error = '';
+		message = '';
 		const { error: err } = await supabase.auth.signInAnonymously();
 		if (err) {
 			error = err.message;

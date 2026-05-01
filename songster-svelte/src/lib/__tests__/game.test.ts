@@ -126,7 +126,7 @@ describe('game.onPlace', () => {
 
 	it('adds card to timeline on correct placement', () => {
 		const card = get(game.activeCard)!;
-		const me = get(game.players).find(p => p.id === 'p1')!;
+		const me = get(game.players).find((p) => p.id === 'p1')!;
 		const correctSlot = findCorrectSlot(me.timeline, card);
 
 		vi.useFakeTimers();
@@ -135,7 +135,7 @@ describe('game.onPlace', () => {
 
 		game.onPlace(correctSlot);
 		expect(get(game.placedResult)).toBe(true);
-		const after = get(game.players).find(p => p.id === 'p1')!;
+		const after = get(game.players).find((p) => p.id === 'p1')!;
 		expect(after.timeline.length).toBe(me.timeline.length + 1);
 		expect(after.timeline).toContainEqual(card);
 	});
@@ -189,9 +189,9 @@ describe('game.onChallenge', () => {
 	});
 
 	it('is blocked during draw phase', () => {
-		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensBefore = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		game.onChallenge();
-		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensAfter = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		expect(tokensAfter).toBe(tokensBefore);
 		expect(get(game.phase)).toBe('draw');
 	});
@@ -201,9 +201,9 @@ describe('game.onChallenge', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('place');
-		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensBefore = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		game.onChallenge();
-		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensAfter = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		expect(tokensAfter).toBe(tokensBefore);
 	});
 });
@@ -265,7 +265,7 @@ describe('game.onPlace — win condition', () => {
 		vi.advanceTimersByTime(1500);
 
 		const card = get(game.activeCard)!;
-		const me = get(game.players).find(p => p.id === 'p1')!;
+		const me = get(game.players).find((p) => p.id === 'p1')!;
 		const correctSlot = findCorrectSlot(me.timeline, card);
 
 		game.onPlace(correctSlot);
@@ -287,11 +287,11 @@ describe('game.onPlace — win condition', () => {
 			year: 1950 + i,
 		}));
 
-		game.players.update(ps =>
-			ps.map(p => (p.id === 'p1' ? { ...p, timeline: fakeTimeline } : p))
+		game.players.update((ps) =>
+			ps.map((p) => (p.id === 'p1' ? { ...p, timeline: fakeTimeline } : p))
 		);
 
-		const me = get(game.players).find(p => p.id === 'p1')!;
+		const me = get(game.players).find((p) => p.id === 'p1')!;
 		const correctSlot = findCorrectSlot(me.timeline, card);
 
 		game.onPlace(correctSlot);
@@ -320,10 +320,10 @@ describe('game.onChallenge — successful challenge path', () => {
 		expect(get(game.phase)).toBe('place');
 		expect(get(game.activePlayerId)).not.toBe('p1');
 
-		const tokensBefore = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensBefore = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		game.onChallenge();
 
-		const tokensAfter = get(game.players).find(p => p.id === 'p1')!.tokens;
+		const tokensAfter = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		expect(tokensAfter).toBe(tokensBefore - 1);
 		expect(get(game.interceptor)).toBe('p1');
 		expect(get(game.phase)).toBe('challenge');
@@ -346,9 +346,7 @@ describe('game.onChallenge — guard conditions', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 
-		game.players.update(ps =>
-			ps.map(p => (p.id === 'p1' ? { ...p, tokens: 0 } : p))
-		);
+		game.players.update((ps) => ps.map((p) => (p.id === 'p1' ? { ...p, tokens: 0 } : p)));
 
 		const phaseBefore = get(game.phase);
 		game.onChallenge();
@@ -382,10 +380,11 @@ describe('game.runAiTurn — placement outcomes', () => {
 		game.onNextTurn();
 
 		const card = get(game.activeCard)!;
-		const aiPlayer = get(game.players).find(p => p.id === get(game.activePlayerId))!;
+		const aiPlayer = get(game.players).find((p) => p.id === get(game.activePlayerId))!;
 		const correct = findCorrectSlot(aiPlayer.timeline, card);
 
-		const wrongSlot = correct === 0 ? 1 : 0;
+		let wrongSlot = correct === 0 ? aiPlayer.timeline.length : 0;
+		if (wrongSlot === correct) wrongSlot = (correct + 1) % (aiPlayer.timeline.length + 1);
 
 		const mathSpy = vi.spyOn(Math, 'random');
 		mathSpy.mockReturnValueOnce(0);
@@ -396,6 +395,9 @@ describe('game.runAiTurn — placement outcomes', () => {
 
 		expect(get(game.placedResult)).toBe(false);
 		expect(get(game.placedSlot)).toBe(wrongSlot);
+
+		mathSpy.mockRestore();
+		vi.useRealTimers();
 	});
 
 	it('triggers win when AI timeline reaches 10 cards', () => {
@@ -412,8 +414,8 @@ describe('game.runAiTurn — placement outcomes', () => {
 			year: 1950 + i,
 		}));
 
-		game.players.update(ps =>
-			ps.map(p => (p.id === aiId ? { ...p, timeline: fakeTimeline } : p))
+		game.players.update((ps) =>
+			ps.map((p) => (p.id === aiId ? { ...p, timeline: fakeTimeline } : p))
 		);
 
 		const mathSpy = vi.spyOn(Math, 'random');

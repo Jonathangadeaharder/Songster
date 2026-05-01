@@ -3,7 +3,8 @@ import { type Handle } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 const isPlaceholder =
-	PUBLIC_SUPABASE_URL.includes('placeholder') || PUBLIC_SUPABASE_ANON_KEY === 'placeholder-anon-key';
+	PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' &&
+	PUBLIC_SUPABASE_ANON_KEY === 'placeholder-anon-key';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (isPlaceholder) {
@@ -35,9 +36,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	event.locals.safeGetSession = async () => {
-		const { data: { user } } = await event.locals.supabase.auth.getUser();
+		const {
+			data: { user },
+		} = await event.locals.supabase.auth.getUser();
 		if (!user) return { session: null };
-		const { data: { session } } = await event.locals.supabase.auth.getSession();
+		const {
+			data: { session },
+		} = await event.locals.supabase.auth.getSession();
 		return { session };
 	};
 
