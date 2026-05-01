@@ -60,6 +60,8 @@ async function loadInitialState(cfg: RemoteGameConfig) {
 	]);
 
 	const timelineMap = new Map<string, Song[]>();
+	// Rows are expected sorted by t.position ascending — getPlayerTimelines orders by position.
+	// splice is safe because positions are contiguous within each player.
 	for (const t of timelinesRows) {
 		const song = SONG_DECK.find((s) => s.id === t.song_id);
 		if (!song) continue;
@@ -121,23 +123,27 @@ async function handleRemoteChange(
 			interceptor.set(null);
 		}
 	} else if (payload.table === 'players' || payload.table === 'timelines') {
-		const [roomPlayers, timelinesRows] = await Promise.all([
-			getRoomPlayers(cfg.roomId),
-			getPlayerTimelines(cfg.roomId),
-		]);
-		const timelineMap = new Map<string, Song[]>();
-		for (const t of timelinesRows) {
-			const song = SONG_DECK.find((s) => s.id === t.song_id);
-			if (!song) continue;
-			const existing = timelineMap.get(t.player_id) ?? [];
-			if (t.position <= existing.length) {
-				existing.splice(t.position, 0, song);
-			} else {
-				existing.push(song);
+		try {
+			const [roomPlayers, timelinesRows] = await Promise.all([
+				getRoomPlayers(cfg.roomId),
+				getPlayerTimelines(cfg.roomId),
+			]);
+			const timelineMap = new Map<string, Song[]>();
+			for (const t of timelinesRows) {
+				const song = SONG_DECK.find((s) => s.id === t.song_id);
+				if (!song) continue;
+				const existing = timelineMap.get(t.player_id) ?? [];
+				if (t.position <= existing.length) {
+					existing.splice(t.position, 0, song);
+				} else {
+					existing.push(song);
+				}
+				timelineMap.set(t.player_id, existing);
 			}
-			timelineMap.set(t.player_id, existing);
+			players.set(mapRoomPlayers(roomPlayers, timelineMap));
+		} catch {
+			// Graceful degradation: skip update on fetch failure
 		}
-		players.set(mapRoomPlayers(roomPlayers, timelineMap));
 	} else if (payload.table === 'rooms') {
 		const state = payload.new;
 		if (state.status === 'playing' && get(screen) === 'lobby') {
@@ -208,10 +214,6 @@ async function startGame() {
 
 	const freshDeck = shuffled(SONG_DECK);
 	const initialPlayers = get(players);
-	let drawIdx = 0;
-	for (const p of initialPlayers) {
-		drawIdx++;
-	}
 	const remaining = freshDeck.slice(initialPlayers.length);
 	drawPile.set(remaining);
 	await updateGameState(config.roomCode, {

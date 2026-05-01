@@ -17,7 +17,7 @@
 	import TweakRadio from '$lib/components/TweakRadio.svelte';
 	import TweakSlider from '$lib/components/TweakSlider.svelte';
 	import TweakToggle from '$lib/components/TweakToggle.svelte';
-	import { getRoomByCode, getCurrentPlayer } from '$lib/room';
+	import { getRoomByCode, getCurrentPlayerInRoom } from '$lib/room';
 
 	let code: string = $derived(page.params.code ?? '');
 	let t = $derived($tweaks);
@@ -27,7 +27,8 @@
 	import type { Writable, Readable } from 'svelte/store';
 
 	let isDemo = $derived(code === 'DEMO');
-	const mode = writable<'demo' | 'remote'>('demo');
+	// svelte-ignore state_referenced_locally
+	const mode = writable<'demo' | 'remote'>(code === 'DEMO' ? 'demo' : 'remote');
 	$effect(() => {
 		mode.set(isDemo ? 'demo' : 'remote');
 	});
@@ -90,7 +91,7 @@
 			try {
 				const room = await getRoomByCode(code);
 				if (cancelled || !room) return;
-				const playerInfo = await getCurrentPlayer();
+				const playerInfo = await getCurrentPlayerInRoom(room.id);
 				if (cancelled || !playerInfo) return;
 
 				await remoteGame.connectRemoteGame({

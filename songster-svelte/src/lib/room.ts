@@ -1,6 +1,5 @@
 import { supabase } from '$lib/supabase';
-import type { Player, Song } from '$lib/types';
-import { SONG_DECK, shuffled } from '$lib/songs';
+import type { Song } from '$lib/types';
 
 export interface Room {
 	id: string;
@@ -122,9 +121,8 @@ export async function updateGameState(
 	const params: Record<string, unknown> = { p_room_code: roomCode };
 	if (updates.phase !== undefined) params.p_phase = updates.phase;
 	if (updates.activePlayerId !== undefined) params.p_active_player_id = updates.activePlayerId;
-	if (updates.drawPile !== undefined) params.p_draw_pile = JSON.stringify(updates.drawPile);
-	if (updates.activeCard !== undefined)
-		params.p_active_card = updates.activeCard ? JSON.stringify(updates.activeCard) : null;
+	if (updates.drawPile !== undefined) params.p_draw_pile = updates.drawPile;
+	if (updates.activeCard !== undefined) params.p_active_card = updates.activeCard ?? null;
 	if (updates.round !== undefined) params.p_round = updates.round;
 
 	const { error } = await supabase.rpc('update_game_state', params);
@@ -173,6 +171,24 @@ export async function getCurrentPlayer(): Promise<{ playerId: string; userId: st
 	return { playerId: data.id, userId: data.user_id };
 }
 
+export async function getCurrentPlayerInRoom(
+	roomId: string
+): Promise<{ playerId: string; userId: string } | null> {
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) return null;
+
+	const { data, error } = await supabase
+		.from('players')
+		.select('id, user_id')
+		.eq('user_id', user.id)
+		.eq('room_id', roomId)
+		.maybeSingle();
+	if (error || !data) return null;
+	return { playerId: data.id, userId: data.user_id };
+}
+
 export function subscribeToRoom(
 	roomId: string,
 	onChange: (payload: { event: string; table: string; new: Record<string, unknown> }) => void
@@ -201,13 +217,17 @@ export function subscribeToRoom(
 				});
 			}
 		)
-		.on('postgres_changes', { event: '*', schema: 'public', table: 'timelines' }, (payload) => {
-			onChange({
-				event: payload.eventType,
-				table: 'timelines',
-				new: payload.new as Record<string, unknown>,
-			});
-		})
+		.on(
+			'postgres_changes',
+			{ event: '*', schema: 'public', table: 'timelines', filter: `room_id=eq.${roomId}` },
+			(payload) => {
+				onChange({
+					event: payload.eventType,
+					table: 'timelines',
+					new: payload.new as Record<string, unknown>,
+				});
+			}
+		)
 		.on(
 			'postgres_changes',
 			{ event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },

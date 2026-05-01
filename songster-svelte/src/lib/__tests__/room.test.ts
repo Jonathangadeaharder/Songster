@@ -12,6 +12,7 @@ import {
 	placeCard,
 	useToken,
 	getCurrentPlayer,
+	getCurrentPlayerInRoom,
 	pickAvatar,
 } from '$lib/room';
 
@@ -149,17 +150,16 @@ describe('updateGameState', () => {
 		});
 	});
 
-	it('serializes draw pile and active card as JSON', async () => {
+	it('passes draw pile and active card as raw objects', async () => {
 		mockRpc.mockResolvedValue({ data: null, error: null });
-		await updateGameState('ABC', {
-			drawPile: [{ id: 's1', num: 1, title: 'A', artist: 'B', year: 2000 }],
-			activeCard: { id: 's2', num: 2, title: 'C', artist: 'D', year: 2010 },
-		});
+		const pile = [{ id: 's1', num: 1, title: 'A', artist: 'B', year: 2000 }];
+		const card = { id: 's2', num: 2, title: 'C', artist: 'D', year: 2010 };
+		await updateGameState('ABC', { drawPile: pile, activeCard: card });
 		expect(mockRpc).toHaveBeenCalledWith(
 			'update_game_state',
 			expect.objectContaining({
-				p_draw_pile: '[{"id":"s1","num":1,"title":"A","artist":"B","year":2000}]',
-				p_active_card: '{"id":"s2","num":2,"title":"C","artist":"D","year":2010}',
+				p_draw_pile: pile,
+				p_active_card: card,
 			})
 		);
 	});
@@ -312,6 +312,40 @@ describe('subscribeToRoom', () => {
 	});
 });
 
+describe('getCurrentPlayerInRoom', () => {
+	it('returns null when no user', async () => {
+		mockAuth.getUser.mockResolvedValue({ data: { user: null } });
+		const result = await getCurrentPlayerInRoom('room-1');
+		expect(result).toBeNull();
+	});
+
+	it('returns player info scoped to room', async () => {
+		mockAuth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'p1', user_id: 'u1' }, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getCurrentPlayerInRoom('room-1');
+		expect(result).toEqual({ playerId: 'p1', userId: 'u1' });
+	});
+
+	it('returns null when no player in room', async () => {
+		mockAuth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getCurrentPlayerInRoom('room-1');
+		expect(result).toBeNull();
+	});
+});
+
 describe('getRoomByCode error handling', () => {
 	it('throws on non-not-found errors', async () => {
 		const chain = {
@@ -363,7 +397,7 @@ describe('updateGameState edge cases', () => {
 			p_room_code: 'ABC',
 			p_phase: 'listen',
 			p_active_player_id: 'p1',
-			p_draw_pile: '[]',
+			p_draw_pile: [],
 			p_active_card: null,
 			p_round: 2,
 		});

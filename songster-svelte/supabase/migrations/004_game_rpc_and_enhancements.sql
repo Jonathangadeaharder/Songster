@@ -4,6 +4,9 @@
 ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS winner_player_id UUID REFERENCES public.players(id);
 ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
 
+-- Add room_id to timelines for efficient realtime filtering
+ALTER TABLE public.timelines ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES public.rooms(id);
+
 -- RPC: Start game — initializes game_state with shuffled deck
 CREATE OR REPLACE FUNCTION public.start_game(p_room_code VARCHAR)
 RETURNS void AS $$
@@ -13,7 +16,7 @@ DECLARE
   room_players RECORD[];
   i INT := 0;
   card JSONB;
-  timeline_cards JSONB := '[]';
+  num_players INT;
 BEGIN
   SELECT * INTO target_room FROM public.rooms WHERE code = p_room_code;
   IF NOT FOUND THEN RAISE EXCEPTION 'Room not found'; END IF;
@@ -34,33 +37,36 @@ BEGIN
     deck := '[]';
   END IF;
 
-  -- Create game state
-  INSERT INTO public.game_state (room_id, round, phase, active_player_id, draw_pile, active_card)
-  VALUES (
-    target_room.id,
-    1,
-    'draw',
-    (SELECT id FROM public.players WHERE room_id = target_room.id AND is_host = true LIMIT 1),
-    deck,
-    NULL
-  );
-
-  -- Mark room as started
-  UPDATE public.rooms SET status = 'playing', started_at = now() WHERE id = target_room.id;
+  SELECT COUNT(*) INTO num_players FROM public.players WHERE room_id = target_room.id;
 
   -- Deal first card to each player's timeline
   FOR room_players IN SELECT * FROM public.players WHERE room_id = target_room.id ORDER BY joined_at
   LOOP
     i := i + 1;
     IF deck->(i - 1) IS NOT NULL THEN
-      INSERT INTO public.timelines (player_id, song_id, position)
+      INSERT INTO public.timelines (player_id, song_id, position, room_id)
       VALUES (
         room_players.id,
         (deck->(i - 1)->>'id'),
-        0
+        0,
+        target_room.id
       );
     END IF;
   END LOOP;
+
+  -- Create game state with remaining cards (remove dealt cards from draw pile)
+  INSERT INTO public.game_state (room_id, round, phase, active_player_id, draw_pile, active_card)
+  VALUES (
+    target_room.id,
+    1,
+    'draw',
+    (SELECT id FROM public.players WHERE room_id = target_room.id AND is_host = true LIMIT 1),
+    deck - num_players,
+    NULL
+  );
+
+  -- Mark room as started
+  UPDATE public.rooms SET status = 'playing', started_at = now() WHERE id = target_room.id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -79,6 +85,13 @@ DECLARE
 BEGIN
   SELECT * INTO target_room FROM public.rooms WHERE code = p_room_code;
   IF NOT FOUND THEN RAISE EXCEPTION 'Room not found'; END IF;
+
+  -- Authorization: caller must be a participant in this room
+  IF NOT EXISTS (
+    SELECT 1 FROM public.players WHERE room_id = target_room.id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
 
   UPDATE public.game_state SET
     phase = COALESCE(p_phase, game_state.phase),
@@ -107,8 +120,8 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'Room not found'; END IF;
 
   IF p_correct THEN
-    INSERT INTO public.timelines (player_id, song_id, position)
-    VALUES (p_player_id, p_song_id, p_position)
+    INSERT INTO public.timelines (player_id, song_id, position, room_id)
+    VALUES (p_player_id, p_song_id, p_position, target_room.id)
     ON CONFLICT DO NOTHING;
   END IF;
 
@@ -131,6 +144,13 @@ BEGIN
   SELECT * INTO target_room FROM public.rooms WHERE code = p_room_code;
   IF NOT FOUND THEN RAISE EXCEPTION 'Room not found'; END IF;
 
+  -- Authorization: caller can only decrement their own tokens
+  IF auth.uid() IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.players WHERE id = p_player_id AND user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
   UPDATE public.players SET tokens = GREATEST(tokens - 1, 0)
   WHERE id = p_player_id AND room_id = target_room.id;
 END;
@@ -149,9 +169,12 @@ CREATE POLICY "Players can add to timeline" ON public.timelines FOR INSERT WITH 
 );
 
 -- Allow players to update their own token count
+DROP POLICY IF EXISTS "Players can update own tokens" ON public.players;
 CREATE POLICY "Players can update own tokens" ON public.players FOR UPDATE USING (
   user_id = auth.uid()
 );
 
--- Ensure realtime broadcasts changes to game_state
+-- Ensure realtime broadcasts changes to all relevant tables
 ALTER PUBLICATION supabase_realtime ADD TABLE public.game_state;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.timelines;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.rooms;

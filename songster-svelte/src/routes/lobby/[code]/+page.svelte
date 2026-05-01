@@ -6,7 +6,12 @@
 	import PlayerChip from '$lib/components/PlayerChip.svelte';
 	import { remoteGame } from '$lib/stores/game-remote';
 	import { game } from '$lib/stores/game';
-	import { getRoomByCode, getRoomPlayers, getCurrentPlayer } from '$lib/room';
+	import {
+		getRoomByCode,
+		getRoomPlayers,
+		getCurrentPlayerInRoom,
+		subscribeToRoom,
+	} from '$lib/room';
 	import type { Player } from '$lib/types';
 
 	let code: string = $derived(page.params.code ?? '');
@@ -22,6 +27,7 @@
 		if (isDemo) return;
 
 		let cancelled = false;
+		let statusChannel: ReturnType<typeof subscribeToRoom> | null = null;
 
 		(async () => {
 			try {
@@ -37,7 +43,7 @@
 				}
 				roomId = room.id;
 
-				const playerInfo = await getCurrentPlayer();
+				const playerInfo = await getCurrentPlayerInRoom(room.id);
 				if (cancelled) return;
 				if (!playerInfo) {
 					error = 'Not in this room';
@@ -50,6 +56,15 @@
 					myPlayerId: playerInfo.playerId,
 					isHost: room.host_id === playerInfo.userId,
 				});
+
+				// Watch for room status changes so non-hosts navigate when host starts
+				if (!cancelled) {
+					statusChannel = subscribeToRoom(room.id, (payload) => {
+						if (payload.table === 'rooms' && payload.new.status === 'playing') {
+							goto(`/game/${code}`);
+						}
+					});
+				}
 			} catch (e) {
 				if (!cancelled) error = e instanceof Error ? e.message : 'Failed to load room';
 			}
@@ -57,6 +72,11 @@
 
 		return () => {
 			cancelled = true;
+			if (statusChannel) {
+				void import('$lib/supabase').then(({ supabase }) => {
+					if (statusChannel) supabase.removeChannel(statusChannel);
+				});
+			}
 			remoteGame.disconnectRemoteGame();
 		};
 	});

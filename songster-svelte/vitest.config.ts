@@ -23,6 +23,7 @@ export default defineConfig({
 			reporter: ['text', 'html', 'clover'],
 			include: [
 				'src/lib/stores/game.ts',
+				'src/lib/stores/game-remote.ts',
 				'src/lib/stores/tweaks.ts',
 				'src/lib/audio.ts',
 				'src/lib/songs.ts',
