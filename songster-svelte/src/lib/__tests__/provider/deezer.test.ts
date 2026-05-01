@@ -130,4 +130,76 @@ describe('deezerProvider.search edge cases', () => {
 		const results = await deezerProvider.search('test');
 		expect(results).toEqual([]);
 	});
+
+	it('returns empty array on non-ok response', async () => {
+		mockFetch.mockResolvedValue({ ok: false, status: 500 });
+		const results = await deezerProvider.search('test');
+		expect(results).toEqual([]);
+	});
+});
+
+describe('deezerProvider - mapDeezerTrack branch coverage', () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('handles missing artist field', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					data: [
+						{
+							id: 999,
+							title: 'No Artist',
+							preview: 'https://example.com/preview.mp3',
+						},
+					],
+				}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toHaveLength(1);
+		expect(results[0].artist).toBe('');
+	});
+
+	it('handles null album field', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					data: [
+						{
+							id: 888,
+							title: 'No Album',
+							artist: { name: 'Test' },
+							preview: 'https://example.com/preview.mp3',
+							album: null,
+						},
+					],
+				}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toHaveLength(1);
+		expect(results[0].cover_small).toBeNull();
+		expect(results[0].cover_medium).toBeNull();
+	});
+
+	it('handles missing preview field', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					data: [
+						{
+							id: 777,
+							title: 'No Preview',
+							artist: { name: 'Test' },
+						},
+					],
+				}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toHaveLength(1);
+		expect(results[0].preview_url).toBe('');
+	});
 });

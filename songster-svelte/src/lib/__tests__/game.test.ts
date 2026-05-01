@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/audio', () => ({
 	playPreview: vi.fn(() => Promise.resolve()),
@@ -7,8 +7,8 @@ vi.mock('$lib/audio', () => ({
 }));
 
 import { get } from 'svelte/store';
-import { game } from '$lib/stores/game';
 import { findCorrectSlot } from '$lib/songs';
+import { game } from '$lib/stores/game';
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -105,7 +105,7 @@ describe('game.onPlace', () => {
 	});
 
 	it('sets phase to reveal after placement', () => {
-		const card = get(game.activeCard)!;
+		const _card = get(game.activeCard)!;
 		vi.useFakeTimers();
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
@@ -115,7 +115,7 @@ describe('game.onPlace', () => {
 	});
 
 	it('records placedSlot', () => {
-		const card = get(game.activeCard)!;
+		const _card = get(game.activeCard)!;
 		vi.useFakeTimers();
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
@@ -201,6 +201,7 @@ describe('game.onChallenge', () => {
 		game.onPlay();
 		vi.advanceTimersByTime(1500);
 		expect(get(game.phase)).toBe('place');
+<<<<<<< HEAD
 		const tokensBefore = get(game.players).find((p) => p.id === 'p1')!.tokens;
 		game.onChallenge();
 		const tokensAfter = get(game.players).find((p) => p.id === 'p1')!.tokens;
@@ -369,6 +370,198 @@ describe('game.onChallenge — guard conditions', () => {
 	});
 });
 
+describe('game.onChallenge — win condition', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('triggers win when interceptor timeline reaches 10 after successful challenge', () => {
+		vi.useFakeTimers();
+		game.onNextTurn();
+
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+
+		const _card = get(game.activeCard)!;
+		const fakeTimeline = Array.from({ length: 9 }, (_, i) => ({
+			id: `fake-${i}`,
+			num: i,
+			title: `Song ${i}`,
+			artist: 'Artist',
+			year: 1950 + i,
+		}));
+
+		game.players.update((ps) =>
+			ps.map((p) => (p.id === 'p1' ? { ...p, timeline: fakeTimeline } : p))
+		);
+
+		const tokensBefore = get(game.players).find((p) => p.id === 'p1')?.tokens ?? 0;
+		game.onChallenge();
+		const tokensAfter = get(game.players).find((p) => p.id === 'p1')?.tokens;
+		expect(tokensAfter).toBe(tokensBefore - 1);
+		expect(get(game.phase)).toBe('challenge');
+
+		vi.advanceTimersByTime(1700);
+		expect(get(game.placedResult)).toBe(true);
+		expect(get(game.phase)).toBe('reveal');
+		expect(get(game.screen)).toBe('play');
+
+		vi.advanceTimersByTime(1300);
+		expect(get(game.screen)).toBe('win');
+		expect(get(game.winner)?.id).toBe('p1');
+	});
+});
+
+describe('game.onPlace — guard conditions', () => {
+	beforeEach(() => {
+		game.onReplay();
+		game.startGame();
+	});
+
+	it('does nothing when phase is not place', () => {
+		game.onPlace(0);
+		expect(get(game.placedSlot)).toBeNull();
+	});
+
+	it('does nothing when activeCard is null', () => {
+		vi.useFakeTimers();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+		game.activeCard.set(null);
+		game.onPlace(0);
+		expect(get(game.placedSlot)).toBeNull();
+	});
+});
+
+describe('game.startGame — guard condition', () => {
+	it('does nothing when screen is not lobby', () => {
+		game.onReplay();
+		game.startGame();
+		expect(get(game.screen)).toBe('play');
+		game.screen.set('win');
+		game.startGame();
+		expect(get(game.screen)).toBe('win');
+	});
+});
+
+describe('game.onPlay — no activeCard', () => {
+	it('does not call playPreview when card is null', () => {
+		game.onReplay();
+		game.startGame();
+		game.activeCard.set(null);
+		vi.useFakeTimers();
+		game.onPlay();
+		expect(get(game.phase)).toBe('listen');
+		vi.advanceTimersByTime(1500);
+		expect(get(game.phase)).toBe('place');
+	});
+});
+
+describe('game.onPlace — no active player', () => {
+	it('does nothing when active player is missing', () => {
+		vi.useFakeTimers();
+		game.onReplay();
+		game.startGame();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+		game.activePlayerId.set('nonexistent');
+		game.onPlace(0);
+		expect(get(game.placedResult)).toBeNull();
+	});
+});
+
+describe('game.runAiTurn — negative correct slot', () => {
+	it('uses slot 0 when findCorrectSlot returns -1', () => {
+		vi.useFakeTimers();
+		game.onReplay();
+		game.startGame();
+		game.onNextTurn();
+
+		const aiId = get(game.activePlayerId);
+		game.players.update((ps) => ps.map((p) => (p.id === aiId ? { ...p, timeline: [] } : p)));
+
+		const mathSpy = vi.spyOn(Math, 'random');
+		mathSpy.mockReturnValue(0.5);
+
+		game.runAiTurn();
+		vi.advanceTimersByTime(3300);
+
+		expect(get(game.placedSlot)).toBe(0);
+		mathSpy.mockRestore();
+	});
+});
+
+describe('game.onPlay — phase not listen on timeout', () => {
+	it('does not set phase to place if phase changed before timeout', () => {
+		vi.useFakeTimers();
+		game.onReplay();
+		game.startGame();
+		game.onPlay();
+		game.phase.set('challenge');
+		vi.advanceTimersByTime(1500);
+		expect(get(game.phase)).toBe('challenge');
+	});
+});
+
+describe('game.runAiTurn — guard conditions', () => {
+	it('returns undefined when screen is not play', () => {
+		game.onReplay();
+		expect(game.runAiTurn()).toBeUndefined();
+	});
+
+	it('returns undefined when activePlayerId is p1', () => {
+		game.onReplay();
+		game.startGame();
+		expect(get(game.activePlayerId)).toBe('p1');
+		expect(game.runAiTurn()).toBeUndefined();
+	});
+
+	it('returns undefined when phase is not draw', () => {
+		game.onReplay();
+		game.startGame();
+		game.onNextTurn();
+		vi.useFakeTimers();
+		game.onPlay();
+		vi.advanceTimersByTime(1500);
+		expect(get(game.phase)).toBe('place');
+		expect(game.runAiTurn()).toBeUndefined();
+	});
+});
+
+describe('game.runAiTurn — cleanup function', () => {
+	it('returns cleanup function that clears timeouts', () => {
+		vi.useFakeTimers();
+		game.onReplay();
+		game.startGame();
+		game.onNextTurn();
+
+		const cleanup = game.runAiTurn();
+		expect(typeof cleanup).toBe('function');
+
+		cleanup!();
+		vi.advanceTimersByTime(4000);
+		expect(get(game.phase)).toBe('draw');
+	});
+});
+
+describe('game.runAiTurn — no active player', () => {
+	it('handles missing active player gracefully', () => {
+		vi.useFakeTimers();
+		game.onReplay();
+		game.startGame();
+		game.onNextTurn();
+
+		game.activePlayerId.set('nonexistent');
+
+		game.runAiTurn();
+		vi.advanceTimersByTime(3300);
+
+		expect(get(game.placedSlot)).toBeNull();
+		expect(get(game.placedResult)).toBeNull();
+	});
+});
+
 describe('game.runAiTurn — placement outcomes', () => {
 	beforeEach(() => {
 		game.onReplay();
@@ -405,7 +598,7 @@ describe('game.runAiTurn — placement outcomes', () => {
 		game.onNextTurn();
 
 		const aiId = get(game.activePlayerId);
-		const card = get(game.activeCard)!;
+		const _card = get(game.activeCard)!;
 		const fakeTimeline = Array.from({ length: 9 }, (_, i) => ({
 			id: `fake-${i}`,
 			num: i,

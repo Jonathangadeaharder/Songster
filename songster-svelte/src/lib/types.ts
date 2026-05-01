@@ -19,6 +19,15 @@ export interface Track extends Song {
 	duration: number;
 }
 
+export interface DeezerTrackData {
+	id: number;
+	title: string;
+	artist?: { name: string };
+	album?: { cover_small?: string; cover_medium?: string; title?: string };
+	preview?: string;
+	duration?: number;
+}
+
 export interface MusicProvider {
 	search(query: string, limit?: number): Promise<Track[]>;
 	getTrack(deezerId: number): Promise<Track | null>;

@@ -16,7 +16,9 @@ function createTweaksStore() {
 		try {
 			const raw = localStorage.getItem('songster.tweaks');
 			if (raw) initial = { ...TWEAK_DEFAULTS, ...JSON.parse(raw) };
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 	}
 
 	const { subscribe, update } = writable<Tweaks>(initial);
@@ -24,10 +26,14 @@ function createTweaksStore() {
 	return {
 		subscribe,
 		set<K extends keyof Tweaks>(key: K, val: Tweaks[K]) {
-			update(prev => {
+			update((prev) => {
 				const next = { ...prev, [key]: val };
 				if (typeof window !== 'undefined') {
-					try { localStorage.setItem('songster.tweaks', JSON.stringify(next)); } catch { /* ignore */ }
+					try {
+						localStorage.setItem('songster.tweaks', JSON.stringify(next));
+					} catch {
+						/* ignore */
+					}
 				}
 				return next;
 			});

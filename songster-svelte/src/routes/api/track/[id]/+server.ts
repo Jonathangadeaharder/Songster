@@ -1,10 +1,10 @@
 import { error, json } from '@sveltejs/kit';
-import type { Track } from '$lib/types';
+import type { DeezerTrackData, Track } from '$lib/types';
 import type { RequestHandler } from './$types';
 
 const DEEZER_API = 'https://api.deezer.com';
 
-function mapDeezerTrack(data: Record<string, unknown>): Track {
+function mapDeezerTrack(data: DeezerTrackData): Track {
 	return {
 		id: `dz-${data.id}`,
 		num: data.id,
