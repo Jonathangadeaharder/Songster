@@ -7,6 +7,7 @@
 	import Waveform from '$lib/components/Waveform.svelte';
 	import Timeline from '$lib/components/Timeline.svelte';
 	import { game } from '$lib/stores/game';
+	import { remoteGame } from '$lib/stores/game-remote';
 	import { tweaks } from '$lib/stores/tweaks';
 	import { colors } from '$lib/utils';
 	import type { Player, Theme, ArtStyle, FlipStyle, Density } from '$lib/types';
@@ -16,49 +17,128 @@
 	import TweakRadio from '$lib/components/TweakRadio.svelte';
 	import TweakSlider from '$lib/components/TweakSlider.svelte';
 	import TweakToggle from '$lib/components/TweakToggle.svelte';
+	import { getRoomByCode, getCurrentPlayerInRoom } from '$lib/room';
 
 	let code: string = $derived(page.params.code ?? '');
 	let t = $derived($tweaks);
 	let { primary, paper } = $derived(colors(t.theme));
 
-	const { round, drawPile, players, activeCard, activePlayerId, phase, placedSlot, placedResult, interceptor, screen: screenStore, dragging } = game;
+	import { derived, writable } from 'svelte/store';
+	import type { Writable, Readable } from 'svelte/store';
 
-	function setTheme(v: string) { tweaks.set('theme', v as Theme); }
-	function setArtStyle(v: string) { tweaks.set('artStyle', v as ArtStyle); }
-	function setFlipStyle(v: string) { tweaks.set('flipStyle', v as FlipStyle); }
-	function setDensity(v: string) { tweaks.set('density', v as Density); }
+	let isDemo = $derived(code === 'DEMO');
+	// svelte-ignore state_referenced_locally
+	const mode = writable<'demo' | 'remote'>(code === 'DEMO' ? 'demo' : 'remote');
+	$effect(() => {
+		mode.set(isDemo ? 'demo' : 'remote');
+	});
 
-	let activePlayer: Player | undefined = $derived($players.find((p: Player) => p.id === $activePlayerId));
-	let me: Player | undefined = $derived($players.find((p: Player) => p.id === 'p1'));
+	function proxy<T>(demo: Writable<T>, remote: Writable<T>): Readable<T> {
+		return derived([demo, remote, mode], ([d, r, m]) => (m === 'demo' ? d : r));
+	}
+
+	function proxyConst<T>(demo: T, remote: Writable<T>): Readable<T> {
+		return derived([remote, mode], ([r, m]) => (m === 'demo' ? demo : r));
+	}
+
+	const round = proxy(game.round, remoteGame.round);
+	const drawPile = proxy(game.drawPile, remoteGame.drawPile);
+	const players = proxy(game.players, remoteGame.players);
+	const activeCard = proxy(game.activeCard, remoteGame.activeCard);
+	const activePlayerId = proxy(game.activePlayerId, remoteGame.activePlayerId);
+	const phase = proxy(game.phase, remoteGame.phase);
+	const placedSlot = proxy(game.placedSlot, remoteGame.placedSlot);
+	const placedResult = proxy(game.placedResult, remoteGame.placedResult);
+	const interceptor = proxy(game.interceptor, remoteGame.interceptor);
+	const screenStore = proxy(game.screen, remoteGame.screen);
+	const dragging = proxy(game.dragging, remoteGame.dragging);
+
+	const myPlayerId = proxyConst('p1', remoteGame.myPlayerId);
+	const isHost = proxyConst(false, remoteGame.isHost);
+	const connected = proxyConst(false, remoteGame.connected);
+
+	function setTheme(v: string) {
+		tweaks.set('theme', v as Theme);
+	}
+	function setArtStyle(v: string) {
+		tweaks.set('artStyle', v as ArtStyle);
+	}
+	function setFlipStyle(v: string) {
+		tweaks.set('flipStyle', v as FlipStyle);
+	}
+	function setDensity(v: string) {
+		tweaks.set('density', v as Density);
+	}
+
+	let activePlayer: Player | undefined = $derived(
+		$players.find((p: Player) => p.id === $activePlayerId)
+	);
+	let me: Player | undefined = $derived($players.find((p: Player) => p.id === $myPlayerId));
 	let myTimeline = $derived(me?.timeline ?? []);
 	let myTokens = $derived(me?.tokens ?? 0);
 	let myLength = $derived(me?.timeline.length ?? 0);
-	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === 'p1');
+	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === $myPlayerId);
 
 	onMount(() => {
-		if ($screenStore === 'lobby') game.startGame();
+		if (isDemo) {
+			if ($screenStore === 'lobby') game.startGame();
+			return;
+		}
+
+		let cancelled = false;
+
+		(async () => {
+			try {
+				const room = await getRoomByCode(code);
+				if (cancelled || !room) return;
+				const playerInfo = await getCurrentPlayerInRoom(room.id);
+				if (cancelled || !playerInfo) return;
+
+				await remoteGame.connectRemoteGame({
+					roomCode: code,
+					roomId: room.id,
+					myPlayerId: playerInfo.playerId,
+					isHost: room.host_id === playerInfo.userId,
+				});
+			} catch {
+				// Silently fail — will show empty state
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+			remoteGame.disconnectRemoteGame();
+		};
 	});
 
 	$effect(() => {
 		$activePlayerId;
 		untrack(() => {
-			if ($phase === 'draw' && $activePlayerId !== 'p1') {
-				game.runAiTurn();
+			if ($phase === 'draw' && $activePlayerId !== $myPlayerId) {
+				if (isDemo) game.runAiTurn();
+				else remoteGame.runAiTurn();
 			}
 		});
 	});
 
 	let dragSlot = $state<number | null>(null);
 
+	function getStore() {
+		return isDemo ? game : remoteGame;
+	}
+
 	function onCardDragStart(e: DragEvent) {
-		if (!myTurnAndPlacing) { e.preventDefault(); return; }
+		if (!myTurnAndPlacing) {
+			e.preventDefault();
+			return;
+		}
 		e.dataTransfer!.setData('text/plain', 'active-card');
 		e.dataTransfer!.effectAllowed = 'move';
-		game.dragging.set(true);
+		getStore().dragging.set(true);
 	}
 
 	function onCardDragEnd() {
-		game.dragging.set(false);
+		getStore().dragging.set(false);
 		dragSlot = null;
 	}
 
@@ -75,20 +155,20 @@
 	function onSlotDrop(e: DragEvent, i: number) {
 		e.preventDefault();
 		dragSlot = null;
-		game.dragging.set(false);
-		game.onPlace(i);
+		getStore().dragging.set(false);
+		getStore().onPlace(i);
 	}
 
 	function onPlay() {
-		game.onPlay();
+		getStore().onPlay();
 	}
 
 	function onNextTurn() {
-		game.onNextTurn();
+		getStore().onNextTurn();
 	}
 
 	function onChallenge() {
-		game.onChallenge();
+		getStore().onChallenge();
 	}
 </script>
 
@@ -112,12 +192,25 @@
 				<Vinyl
 					size={190}
 					spinning={$phase === 'listen' || $phase === 'place'}
-					label={$phase === 'listen' || $phase === 'place' ? 'NOW SPINNING' : $phase === 'reveal' ? ($placedResult ? 'CORRECT' : 'DISCARD') : 'STANDBY'}
-					subLabel={$phase === 'reveal' && $activeCard ? `${$activeCard.year} · ${$activeCard.artist}` : '33⅓ RPM'}
+					label={$phase === 'listen' || $phase === 'place'
+						? 'NOW SPINNING'
+						: $phase === 'reveal'
+							? $placedResult
+								? 'CORRECT'
+								: 'DISCARD'
+							: 'STANDBY'}
+					subLabel={$phase === 'reveal' && $activeCard
+						? `${$activeCard.year} · ${$activeCard.artist}`
+						: '33⅓ RPM'}
 					intensity={t.animIntensity}
 				/>
 
-				<Waveform bars={42} height={32} playing={$phase === 'listen' || $phase === 'place'} intensity={t.animIntensity} />
+				<Waveform
+					bars={42}
+					height={32}
+					playing={$phase === 'listen' || $phase === 'place'}
+					intensity={t.animIntensity}
+				/>
 
 				<div class="phase-label">
 					{#if $phase === 'draw'}
@@ -125,7 +218,9 @@
 					{:else if $phase === 'listen'}
 						Listening · 0:30 preview
 					{:else if $phase === 'place'}
-						{$activePlayerId === 'p1' ? 'Drag the card onto your timeline' : `${activePlayer?.name} is placing…`}
+						{$activePlayerId === $myPlayerId
+							? 'Drag the card onto your timeline'
+							: `${activePlayer?.name} is placing…`}
 					{:else if $phase === 'reveal'}
 						{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
 					{:else if $phase === 'challenge'}
@@ -143,11 +238,17 @@
 						draggable={myTurnAndPlacing ? 'true' : undefined}
 						ondragstart={onCardDragStart}
 						ondragend={onCardDragEnd}
-						style="cursor: {myTurnAndPlacing ? 'grab' : ($phase === 'draw' && $activePlayerId === 'p1' ? 'pointer' : 'default')}; opacity: {$dragging ? 0.3 : 1}"
+						style="cursor: {myTurnAndPlacing
+							? 'grab'
+							: $phase === 'draw' && $activePlayerId === $myPlayerId
+								? 'pointer'
+								: 'default'}; opacity: {$dragging ? 0.3 : 1}"
 					>
 						<button
-							onclick={$phase === 'draw' && $activePlayerId === 'p1' ? onPlay : undefined}
-							style="background: none; border: none; padding: 0; pointer-events: {myTurnAndPlacing ? 'none' : 'auto'}"
+							onclick={$phase === 'draw' && $activePlayerId === $myPlayerId ? onPlay : undefined}
+							style="background: none; border: none; padding: 0; pointer-events: {myTurnAndPlacing
+								? 'none'
+								: 'auto'}"
 						>
 							<HitCard
 								song={$activeCard}
@@ -172,7 +273,7 @@
 				{/if}
 			</div>
 
-			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== 'p1'}
+			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
 				<div class="challenge-bar">
 					<div>
 						<div class="challenge-label">Challenge</div>
@@ -182,7 +283,9 @@
 						class="intercept-btn"
 						onclick={onChallenge}
 						disabled={myTokens <= 0}
-						style="opacity: {myTokens > 0 ? 1 : 0.35}; cursor: {myTokens > 0 ? 'pointer' : 'default'}"
+						style="opacity: {myTokens > 0 ? 1 : 0.35}; cursor: {myTokens > 0
+							? 'pointer'
+							: 'default'}"
 					>
 						◈ {myTokens} · Intercept
 					</button>
@@ -205,9 +308,13 @@
 					frozen={!myTurnAndPlacing}
 					draggingActive={myTurnAndPlacing}
 					hoverSlot={dragSlot}
-					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === 'p1' ? $placedSlot : null}
-					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === 'p1' ? $placedSlot : null}
-					onSlotClick={myTurnAndPlacing ? (i) => game.onPlace(i) : undefined}
+					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === $myPlayerId
+						? $placedSlot
+						: null}
+					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === $myPlayerId
+						? $placedSlot
+						: null}
+					onSlotClick={myTurnAndPlacing ? (i) => getStore().onPlace(i) : undefined}
 					onSlotDragOver={myTurnAndPlacing ? (_e, i) => onSlotDragOver(_e, i) : undefined}
 					onSlotDragLeave={myTurnAndPlacing ? (_e, i) => onSlotDragLeave(_e, i) : undefined}
 					onSlotDrop={myTurnAndPlacing ? (_e, i) => onSlotDrop(_e, i) : undefined}
@@ -215,7 +322,11 @@
 
 				{#if $phase === 'reveal'}
 					<div class="next-btn-wrap">
-						<button class="next-btn" style="background: {primary}; color: {paper}" onclick={onNextTurn}>
+						<button
+							class="next-btn"
+							style="background: {primary}; color: {paper}"
+							onclick={onNextTurn}
+						>
 							Side B · Next Turn →
 						</button>
 					</div>
@@ -228,18 +339,66 @@
 
 	<TweaksPanel title="Tweaks · Songster">
 		<TweakSection label="Theme" />
-		<TweakRadio label="Mode" value={t.theme} options={[{ value: 'light', label: 'Paper' }, { value: 'dark', label: 'After-hours' }]} onchange={setTheme} />
-		<TweakRadio label="Card Art" value={t.artStyle} options={[{ value: 'grooves', label: 'Grooves' }, { value: 'halftone', label: 'Halftone' }, { value: 'solid', label: 'Solid' }, { value: 'inverse', label: 'Inverse' }]} onchange={setArtStyle} />
+		<TweakRadio
+			label="Mode"
+			value={t.theme}
+			options={[
+				{ value: 'light', label: 'Paper' },
+				{ value: 'dark', label: 'After-hours' },
+			]}
+			onchange={setTheme}
+		/>
+		<TweakRadio
+			label="Card Art"
+			value={t.artStyle}
+			options={[
+				{ value: 'grooves', label: 'Grooves' },
+				{ value: 'halftone', label: 'Halftone' },
+				{ value: 'solid', label: 'Solid' },
+				{ value: 'inverse', label: 'Inverse' },
+			]}
+			onchange={setArtStyle}
+		/>
 
 		<TweakSection label="Motion" />
-		<TweakRadio label="Flip" value={t.flipStyle} options={[{ value: 'flip', label: '3D' }, { value: 'slide', label: 'Slide' }, { value: 'fade', label: 'Fade' }, { value: 'instant', label: 'Cut' }]} onchange={setFlipStyle} />
-		<TweakSlider label="Anim intensity" value={t.animIntensity} min={0.3} max={2.5} step={0.1} onchange={(v) => tweaks.set('animIntensity', v)} />
+		<TweakRadio
+			label="Flip"
+			value={t.flipStyle}
+			options={[
+				{ value: 'flip', label: '3D' },
+				{ value: 'slide', label: 'Slide' },
+				{ value: 'fade', label: 'Fade' },
+				{ value: 'instant', label: 'Cut' },
+			]}
+			onchange={setFlipStyle}
+		/>
+		<TweakSlider
+			label="Anim intensity"
+			value={t.animIntensity}
+			min={0.3}
+			max={2.5}
+			step={0.1}
+			onchange={(v) => tweaks.set('animIntensity', v)}
+		/>
 
 		<TweakSection label="Timeline" />
-		<TweakRadio label="Density" value={t.density} options={[{ value: 'compact', label: 'Tight' }, { value: 'regular', label: 'Reg' }, { value: 'comfy', label: 'Airy' }]} onchange={setDensity} />
+		<TweakRadio
+			label="Density"
+			value={t.density}
+			options={[
+				{ value: 'compact', label: 'Tight' },
+				{ value: 'regular', label: 'Reg' },
+				{ value: 'comfy', label: 'Airy' },
+			]}
+			onchange={setDensity}
+		/>
 
 		<TweakSection label="Rules" />
-		<TweakToggle label="Interception tokens" value={t.interceptionEnabled} onchange={(v) => tweaks.set('interceptionEnabled', v)} />
+		<TweakToggle
+			label="Interception tokens"
+			value={t.interceptionEnabled}
+			onchange={(v) => tweaks.set('interceptionEnabled', v)}
+		/>
 	</TweaksPanel>
 </div>
 

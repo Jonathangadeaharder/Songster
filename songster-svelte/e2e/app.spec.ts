@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-async function startGame(page: import('@playwright/test').Page, code = 'E2E') {
+async function startGame(page: import('@playwright/test').Page, code = 'DEMO') {
 	await page.goto(`/lobby/${code}`);
 	await page.getByRole('button', { name: 'Start Game' }).click();
 	await expect(page).toHaveURL((url) => url.pathname === `/game/${code}`);
@@ -11,42 +11,54 @@ test.describe('Home page', () => {
 		await page.goto('/');
 		await expect(page.getByText('Songster').first()).toBeVisible();
 		await expect(page.getByText('Music trivia timeline game')).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Create Room' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Join Room' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Create Room' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Join Room' })).toBeVisible();
+		await expect(page.getByRole('link', { name: /play solo/i })).toBeVisible();
 	});
 
-	test('Create Room link navigates to lobby', async ({ page }) => {
+	test('Create Room button navigates to lobby after filling name', async ({ page }) => {
 		await page.goto('/');
-		await page.getByRole('link', { name: 'Create Room' }).click();
+		const createForm = page.locator('form').filter({ hasText: 'Create Room' });
+		await createForm.getByPlaceholder('Your name').fill('Alice');
+		await createForm.getByRole('button', { name: 'Create Room' }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 
-	test('Join Room link navigates to lobby', async ({ page }) => {
+	test('Join Room button navigates to lobby after filling fields', async ({ page }) => {
 		await page.goto('/');
-		await page.getByRole('link', { name: 'Join Room' }).click();
+		const joinForm = page.locator('form').filter({ hasText: 'Join Room' });
+		await joinForm.getByPlaceholder('Room code').fill('ABC123');
+		await joinForm.getByPlaceholder('Your name').fill('Bob');
+		await joinForm.getByRole('button', { name: 'Join Room' }).click();
+		await expect(page).toHaveURL(/\/lobby\/DEMO/);
+	});
+
+	test('Solo play link navigates to lobby', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: /play solo/i }).click();
 		await expect(page).toHaveURL(/\/lobby\/DEMO/);
 	});
 });
 
 test.describe('Lobby page', () => {
 	test('shows room code and player chips', async ({ page }) => {
-		await page.goto('/lobby/TEST12');
-		await expect(page.getByRole('heading', { name: 'Room TEST12' })).toBeVisible();
-		await expect(page.getByText('Waiting for players')).toBeVisible();
+		await page.goto('/lobby/DEMO');
+		await expect(page.getByRole('heading', { name: 'Solo Game' })).toBeVisible();
+		await expect(page.getByText('AI opponents ready')).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
 	});
 
 	test('Start Game navigates to game page', async ({ page }) => {
-		await page.goto('/lobby/TEST12');
+		await page.goto('/lobby/DEMO');
 		await page.getByRole('button', { name: 'Start Game' }).click();
-		await expect(page).toHaveURL(/\/game\/TEST12/);
+		await expect(page).toHaveURL(/\/game\/DEMO/);
 	});
 });
 
 test.describe('Game page', () => {
 	test('renders game chrome with room code', async ({ page }) => {
-		await startGame(page, 'E2E');
-		await expect(page.getByText(/Game · E2E/)).toBeVisible();
+		await startGame(page, 'DEMO');
+		await expect(page.getByText(/Game · DEMO/)).toBeVisible();
 	});
 
 	test('shows player chips for all 4 players', async ({ page }) => {
@@ -78,7 +90,7 @@ test.describe('Game page', () => {
 
 test.describe('Results page', () => {
 	test('shows winner section', async ({ page }) => {
-		await page.goto('/results/E2E');
+		await page.goto('/results/DEMO');
 		await expect(page.getByText('Winner')).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Play Again' })).toBeVisible();
 	});
