@@ -6,9 +6,11 @@
 	import Vinyl from '$lib/components/Vinyl.svelte';
 	import Waveform from '$lib/components/Waveform.svelte';
 	import Timeline from '$lib/components/Timeline.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { game } from '$lib/stores/game';
 	import { remoteGame } from '$lib/stores/game-remote';
 	import { tweaks } from '$lib/stores/tweaks';
+	import { toasts } from '$lib/stores/toast';
 	import { colors } from '$lib/utils';
 	import type { Player, Theme, ArtStyle, FlipStyle, Density } from '$lib/types';
 	import { onMount, untrack } from 'svelte';
@@ -27,6 +29,7 @@
 	import type { Writable, Readable } from 'svelte/store';
 
 	let isDemo = $derived(code === 'DEMO');
+	let loading = $state(true);
 	// svelte-ignore state_referenced_locally
 	const mode = writable<'demo' | 'remote'>(code === 'DEMO' ? 'demo' : 'remote');
 	$effect(() => {
@@ -82,6 +85,7 @@
 	onMount(() => {
 		if (isDemo) {
 			if ($screenStore === 'lobby') game.startGame();
+			loading = false;
 			return;
 		}
 
@@ -101,7 +105,9 @@
 					isHost: room.host_id === playerInfo.userId,
 				});
 			} catch {
-				// Silently fail — will show empty state
+				toasts.error('Failed to connect to game');
+			} finally {
+				if (!cancelled) loading = false;
 			}
 		})();
 
@@ -170,170 +176,209 @@
 	function onChallenge() {
 		getStore().onChallenge();
 	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			dragSlot = null;
+			getStore().dragging.set(false);
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="page">
 	<Chrome theme={t.theme} title="Game · {code} · Songster">
 		{#snippet right()}
-			<div class="turn-label">
+			<div class="turn-label" aria-live="polite" aria-label="Current turn">
 				<span style="opacity: 0.6">TURN</span>
 				<span>{activePlayer?.name}</span>
 			</div>
 		{/snippet}
 
 		{#snippet children()}
-			<div class="player-rail">
-				{#each $players as player}
-					<PlayerChip {player} active={player.id === $activePlayerId} theme={t.theme} />
-				{/each}
-			</div>
+			{#if loading}
+				<main id="main-content" class="loading-game" aria-label="Loading game">
+					<Skeleton width="100%" height="44px" />
+					<div class="loading-vinyl">
+						<Skeleton width="190px" height="190px" borderRadius="50%" />
+					</div>
+					<Skeleton width="100%" height="100px" />
+				</main>
+			{:else}
+				<main id="main-content" class="game-content" aria-label="Game board">
+					<div class="player-rail" role="list" aria-label="Players">
+						{#each $players as player}
+							<div role="listitem">
+								<PlayerChip {player} active={player.id === $activePlayerId} theme={t.theme} />
+							</div>
+						{/each}
+					</div>
 
-			<div class="vinyl-section">
-				<Vinyl
-					size={190}
-					spinning={$phase === 'listen' || $phase === 'place'}
-					label={$phase === 'listen' || $phase === 'place'
-						? 'NOW SPINNING'
-						: $phase === 'reveal'
-							? $placedResult
-								? 'CORRECT'
-								: 'DISCARD'
-							: 'STANDBY'}
-					subLabel={$phase === 'reveal' && $activeCard
-						? `${$activeCard.year} · ${$activeCard.artist}`
-						: '33⅓ RPM'}
-					intensity={t.animIntensity}
-				/>
+					<div class="vinyl-section">
+						<Vinyl
+							size={190}
+							spinning={$phase === 'listen' || $phase === 'place'}
+							label={$phase === 'listen' || $phase === 'place'
+								? 'NOW SPINNING'
+								: $phase === 'reveal'
+									? $placedResult
+										? 'CORRECT'
+										: 'DISCARD'
+									: 'STANDBY'}
+							subLabel={$phase === 'reveal' && $activeCard
+								? `${$activeCard.year} · ${$activeCard.artist}`
+								: '33⅓ RPM'}
+							intensity={t.animIntensity}
+						/>
 
-				<Waveform
-					bars={42}
-					height={32}
-					playing={$phase === 'listen' || $phase === 'place'}
-					intensity={t.animIntensity}
-				/>
+						<Waveform
+							bars={42}
+							height={32}
+							playing={$phase === 'listen' || $phase === 'place'}
+							intensity={t.animIntensity}
+						/>
 
-				<div class="phase-label">
-					{#if $phase === 'draw'}
-						{activePlayer?.name}'s draw — tap the record
-					{:else if $phase === 'listen'}
-						Listening · 0:30 preview
-					{:else if $phase === 'place'}
-						{$activePlayerId === $myPlayerId
-							? 'Drag the card onto your timeline'
-							: `${activePlayer?.name} is placing…`}
-					{:else if $phase === 'reveal'}
-						{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
-					{:else if $phase === 'challenge'}
-						{$players.find((p) => p.id === $interceptor)?.name} challenged!
+						<div class="phase-label" aria-live="polite" aria-label="Game phase">
+							{#if $phase === 'draw'}
+								{activePlayer?.name}'s draw — tap the record
+							{:else if $phase === 'listen'}
+								Listening · 0:30 preview
+							{:else if $phase === 'place'}
+								{$activePlayerId === $myPlayerId
+									? 'Drag the card onto your timeline'
+									: `${activePlayer?.name} is placing…`}
+							{:else if $phase === 'reveal'}
+								{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
+							{:else if $phase === 'challenge'}
+								{$players.find((p) => p.id === $interceptor)?.name} challenged!
+							{/if}
+						</div>
+					</div>
+
+					<div class="card-area">
+						{#if $activeCard && ($phase === 'draw' || $phase === 'listen' || $phase === 'place' || $phase === 'challenge')}
+							<div
+								class="card-wrapper"
+								role="group"
+								aria-label="Active card: {$activeCard.title} by {$activeCard.artist}"
+								draggable={myTurnAndPlacing ? 'true' : undefined}
+								ondragstart={onCardDragStart}
+								ondragend={onCardDragEnd}
+								style="cursor: {myTurnAndPlacing
+									? 'grab'
+									: $phase === 'draw' && $activePlayerId === $myPlayerId
+										? 'pointer'
+										: 'default'}; opacity: {$dragging ? 0.3 : 1}"
+							>
+								<button
+									onclick={$phase === 'draw' && $activePlayerId === $myPlayerId
+										? onPlay
+										: undefined}
+									aria-label={$phase === 'draw' && $activePlayerId === $myPlayerId
+										? 'Draw card'
+										: undefined}
+									style="background: none; border: none; padding: 0; pointer-events: {myTurnAndPlacing
+										? 'none'
+										: 'auto'}"
+								>
+									<HitCard
+										song={$activeCard}
+										faceDown={true}
+										size="md"
+										artStyle={t.artStyle}
+										flipStyle={t.flipStyle}
+										theme={t.theme}
+									/>
+								</button>
+							</div>
+						{:else if $phase === 'reveal' && $activeCard}
+							<div class="card-reveal" class:correct={$placedResult} class:wrong={!$placedResult}>
+								<HitCard
+									song={$activeCard}
+									faceDown={false}
+									size="md"
+									artStyle={t.artStyle}
+									flipStyle={t.flipStyle}
+									theme={t.theme}
+									correct={$placedResult ?? undefined}
+								/>
+							</div>
+						{/if}
+					</div>
+
+					{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
+						<div class="challenge-bar" role="region" aria-label="Challenge option">
+							<div>
+								<div class="challenge-label">Challenge</div>
+								<div class="challenge-text">Think they're wrong? Spend a token.</div>
+							</div>
+							<button
+								class="intercept-btn"
+								onclick={onChallenge}
+								disabled={myTokens <= 0}
+								style="opacity: {myTokens > 0 ? 1 : 0.35}; cursor: {myTokens > 0
+									? 'pointer'
+									: 'default'}"
+							>
+								◈ {myTokens} · Intercept
+							</button>
+						</div>
 					{/if}
-				</div>
-			</div>
 
-			<div class="card-area">
-				{#if $activeCard && ($phase === 'draw' || $phase === 'listen' || $phase === 'place' || $phase === 'challenge')}
-					<div
-						class="card-wrapper"
-						role="group"
-						aria-label="Active card"
-						draggable={myTurnAndPlacing ? 'true' : undefined}
-						ondragstart={onCardDragStart}
-						ondragend={onCardDragEnd}
-						style="cursor: {myTurnAndPlacing
-							? 'grab'
-							: $phase === 'draw' && $activePlayerId === $myPlayerId
-								? 'pointer'
-								: 'default'}; opacity: {$dragging ? 0.3 : 1}"
-					>
-						<button
-							onclick={$phase === 'draw' && $activePlayerId === $myPlayerId ? onPlay : undefined}
-							style="background: none; border: none; padding: 0; pointer-events: {myTurnAndPlacing
-								? 'none'
-								: 'auto'}"
-						>
-							<HitCard
-								song={$activeCard}
-								faceDown={true}
-								size="md"
+					<div class="timeline-section">
+						<div class="timeline-header">
+							<div class="timeline-label">Your Timeline</div>
+							<div class="timeline-count" aria-label="{myLength} of 10 cards">
+								{myLength}<span style="opacity: 0.4">/10</span>
+							</div>
+						</div>
+
+						{#if myLength === 0 && $phase !== 'reveal'}
+							<div class="empty-timeline" aria-label="Empty timeline">
+								<p class="empty-text">Your timeline is empty</p>
+								<p class="empty-hint">Place cards here to build your sequence</p>
+							</div>
+						{:else}
+							<Timeline
+								cards={myTimeline}
+								density={t.density}
 								artStyle={t.artStyle}
-								flipStyle={t.flipStyle}
 								theme={t.theme}
+								frozen={!myTurnAndPlacing}
+								draggingActive={myTurnAndPlacing}
+								hoverSlot={dragSlot}
+								highlightSlot={$phase === 'reveal' &&
+								$placedResult &&
+								$activePlayerId === $myPlayerId
+									? $placedSlot
+									: null}
+								wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === $myPlayerId
+									? $placedSlot
+									: null}
+								onSlotClick={myTurnAndPlacing ? (i) => getStore().onPlace(i) : undefined}
+								onSlotDragOver={myTurnAndPlacing ? (_e, i) => onSlotDragOver(_e, i) : undefined}
+								onSlotDragLeave={myTurnAndPlacing ? (_e, i) => onSlotDragLeave(_e, i) : undefined}
+								onSlotDrop={myTurnAndPlacing ? (_e, i) => onSlotDrop(_e, i) : undefined}
 							/>
-						</button>
-					</div>
-				{:else if $phase === 'reveal' && $activeCard}
-					<HitCard
-						song={$activeCard}
-						faceDown={false}
-						size="md"
-						artStyle={t.artStyle}
-						flipStyle={t.flipStyle}
-						theme={t.theme}
-						correct={$placedResult ?? undefined}
-					/>
-				{/if}
-			</div>
+						{/if}
 
-			{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
-				<div class="challenge-bar">
-					<div>
-						<div class="challenge-label">Challenge</div>
-						<div class="challenge-text">Think they're wrong? Spend a token.</div>
+						{#if $phase === 'reveal'}
+							<div class="next-btn-wrap">
+								<button
+									class="next-btn"
+									style="background: {primary}; color: {paper}"
+									onclick={onNextTurn}
+								>
+									Side B · Next Turn →
+								</button>
+							</div>
+						{:else}
+							<div style="height: 16px"></div>
+						{/if}
 					</div>
-					<button
-						class="intercept-btn"
-						onclick={onChallenge}
-						disabled={myTokens <= 0}
-						style="opacity: {myTokens > 0 ? 1 : 0.35}; cursor: {myTokens > 0
-							? 'pointer'
-							: 'default'}"
-					>
-						◈ {myTokens} · Intercept
-					</button>
-				</div>
+				</main>
 			{/if}
-
-			<div class="timeline-section">
-				<div class="timeline-header">
-					<div class="timeline-label">Your Timeline</div>
-					<div class="timeline-count">
-						{myLength}<span style="opacity: 0.4">/10</span>
-					</div>
-				</div>
-
-				<Timeline
-					cards={myTimeline}
-					density={t.density}
-					artStyle={t.artStyle}
-					theme={t.theme}
-					frozen={!myTurnAndPlacing}
-					draggingActive={myTurnAndPlacing}
-					hoverSlot={dragSlot}
-					highlightSlot={$phase === 'reveal' && $placedResult && $activePlayerId === $myPlayerId
-						? $placedSlot
-						: null}
-					wrongSlot={$phase === 'reveal' && !$placedResult && $activePlayerId === $myPlayerId
-						? $placedSlot
-						: null}
-					onSlotClick={myTurnAndPlacing ? (i) => getStore().onPlace(i) : undefined}
-					onSlotDragOver={myTurnAndPlacing ? (_e, i) => onSlotDragOver(_e, i) : undefined}
-					onSlotDragLeave={myTurnAndPlacing ? (_e, i) => onSlotDragLeave(_e, i) : undefined}
-					onSlotDrop={myTurnAndPlacing ? (_e, i) => onSlotDrop(_e, i) : undefined}
-				/>
-
-				{#if $phase === 'reveal'}
-					<div class="next-btn-wrap">
-						<button
-							class="next-btn"
-							style="background: {primary}; color: {paper}"
-							onclick={onNextTurn}
-						>
-							Side B · Next Turn →
-						</button>
-					</div>
-				{:else}
-					<div style="height: 16px"></div>
-				{/if}
-			</div>
 		{/snippet}
 	</Chrome>
 
@@ -423,6 +468,11 @@
 		gap: 10px;
 		padding: 10px 16px 12px;
 		border-bottom: 0.5px solid var(--primary, #0a0a0a);
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.player-rail::-webkit-scrollbar {
+		display: none;
 	}
 	.vinyl-section {
 		padding: 20px 16px 8px;
@@ -447,6 +497,19 @@
 	}
 	.card-wrapper {
 		display: inline-block;
+	}
+	.card-reveal {
+		animation: card-pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+	@keyframes card-pop {
+		from {
+			opacity: 0;
+			transform: scale(0.9);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
 	}
 	.challenge-bar {
 		display: flex;
@@ -502,6 +565,23 @@
 		font-size: 18px;
 		font-weight: 700;
 	}
+	.empty-timeline {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		padding: 24px 16px;
+	}
+	.empty-text {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 11px;
+		opacity: 0.5;
+	}
+	.empty-hint {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 9px;
+		opacity: 0.35;
+	}
 	.next-btn-wrap {
 		padding: 4px 16px 16px;
 	}
@@ -516,5 +596,66 @@
 		text-transform: uppercase;
 		font-weight: 600;
 		cursor: pointer;
+	}
+	.loading-game {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 16px;
+		padding: 24px 16px;
+	}
+	.loading-vinyl {
+		padding: 16px 0;
+	}
+	@media (max-width: 480px) {
+		.page {
+			padding: 8px;
+		}
+		.player-rail {
+			gap: 6px;
+			padding: 8px 12px;
+		}
+		.vinyl-section {
+			padding: 12px 12px 4px;
+		}
+		.card-area {
+			min-height: 120px;
+		}
+		.challenge-bar {
+			flex-direction: column;
+			gap: 8px;
+			text-align: center;
+			margin: 0 8px;
+			padding: 10px 12px;
+		}
+		.timeline-header {
+			padding: 0 12px 2px;
+		}
+		.next-btn-wrap {
+			padding: 4px 12px 12px;
+		}
+		.next-btn {
+			padding: 12px;
+			font-size: 10px;
+			letter-spacing: 3px;
+		}
+	}
+	@media (max-width: 360px) {
+		.turn-label {
+			font-size: 9px;
+		}
+		.phase-label {
+			font-size: 9px;
+			letter-spacing: 2px;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.card-reveal {
+			animation: none;
+		}
+		.next-btn,
+		.intercept-btn {
+			transition: none;
+		}
 	}
 </style>

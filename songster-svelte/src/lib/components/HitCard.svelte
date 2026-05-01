@@ -2,11 +2,23 @@
 	import type { Song, ArtStyle, FlipStyle, Theme } from '$lib/types';
 
 	let {
-		song, faceDown = false, size = 'md', artStyle = 'grooves', flipStyle = 'instant',
-		theme = 'light', correct, styleExtra = '',
+		song,
+		faceDown = false,
+		size = 'md',
+		artStyle = 'grooves',
+		flipStyle = 'instant',
+		theme = 'light',
+		correct,
+		styleExtra = '',
 	}: {
-		song: Song; faceDown?: boolean; size?: 'sm' | 'md'; artStyle?: ArtStyle;
-		flipStyle?: FlipStyle; theme?: Theme; correct?: boolean; styleExtra?: string;
+		song: Song;
+		faceDown?: boolean;
+		size?: 'sm' | 'md';
+		artStyle?: ArtStyle;
+		flipStyle?: FlipStyle;
+		theme?: Theme;
+		correct?: boolean;
+		styleExtra?: string;
 	} = $props();
 
 	let sizeMap = { sm: { w: 70, h: 96 }, md: { w: 100, h: 140 } };
@@ -23,13 +35,51 @@
 	{#if !faceDown}
 		<div class="card-front card-face">
 			<div class="card-label">Songster</div>
-			<div class="card-art" class:grooves={artStyle === 'grooves'} class:halftone={artStyle === 'halftone'} class:solid={artStyle === 'solid'} class:inverse={artStyle === 'inverse'}>
+			<div
+				class="card-art"
+				class:grooves={artStyle === 'grooves'}
+				class:halftone={artStyle === 'halftone'}
+				class:solid={artStyle === 'solid'}
+				class:inverse={artStyle === 'inverse'}
+			>
 				{#if artStyle === 'grooves'}
 					<svg viewBox="0 0 40 40" style="width: 100%; height: 100%">
-						<circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2" />
-						<circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.15" />
-						<circle cx="20" cy="20" r="10" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.2" />
-						<circle cx="20" cy="20" r="6" fill="none" stroke="currentColor" stroke-width="0.5" opacity="0.15" />
+						<circle
+							cx="20"
+							cy="20"
+							r="18"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="0.5"
+							opacity="0.2"
+						/>
+						<circle
+							cx="20"
+							cy="20"
+							r="14"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="0.5"
+							opacity="0.15"
+						/>
+						<circle
+							cx="20"
+							cy="20"
+							r="10"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="0.5"
+							opacity="0.2"
+						/>
+						<circle
+							cx="20"
+							cy="20"
+							r="6"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="0.5"
+							opacity="0.15"
+						/>
 						<circle cx="20" cy="20" r="2" fill="currentColor" opacity="0.2" />
 					</svg>
 				{:else if artStyle === 'halftone'}
@@ -62,13 +112,36 @@
 		overflow: hidden;
 		position: relative;
 		background: var(--bg, transparent);
-		transition: transform 0.3s, box-shadow 0.3s;
+		transition:
+			transform 0.3s,
+			box-shadow 0.3s;
+		perspective: 800px;
+	}
+	.card-outer.face-down {
+		transform-style: preserve-3d;
+	}
+	.card-outer:not(.face-down) {
+		animation: card-flip-in 400ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+	@keyframes card-flip-in {
+		from {
+			opacity: 0;
+			transform: rotateY(90deg);
+		}
+		to {
+			opacity: 1;
+			transform: rotateY(0deg);
+		}
 	}
 	.card-outer.correct {
-		box-shadow: 0 0 0 2px #34c759, 0 4px 12px rgba(52, 199, 89, 0.3);
+		box-shadow:
+			0 0 0 2px #34c759,
+			0 4px 12px rgba(52, 199, 89, 0.3);
 	}
 	.card-outer.wrong {
-		box-shadow: 0 0 0 2px #ff3b30, 0 4px 12px rgba(255, 59, 48, 0.3);
+		box-shadow:
+			0 0 0 2px #ff3b30,
+			0 4px 12px rgba(255, 59, 48, 0.3);
 	}
 	.card-face {
 		display: flex;
@@ -94,19 +167,22 @@
 		opacity: 0.6;
 	}
 	.halftone-dots {
-		width: 100%; height: 100%;
+		width: 100%;
+		height: 100%;
 		background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
 		background-size: 4px 4px;
 		opacity: 0.3;
 	}
 	.solid-fill {
-		width: 80%; height: 80%;
+		width: 80%;
+		height: 80%;
 		background: currentColor;
 		opacity: 0.08;
 		border-radius: 4px;
 	}
 	.inverse-fill {
-		width: 80%; height: 80%;
+		width: 80%;
+		height: 80%;
 		border: 2px solid currentColor;
 		opacity: 0.2;
 		border-radius: 4px;
@@ -145,5 +221,13 @@
 	}
 	.card-back.card-face {
 		justify-content: center;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.card-outer {
+			transition: none;
+		}
+		.card-outer:not(.face-down) {
+			animation: none;
+		}
 	}
 </style>
