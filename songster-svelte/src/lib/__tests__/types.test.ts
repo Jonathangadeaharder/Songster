@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import type { Track, MusicProvider } from '$lib/types';
+import { describe, expect, it } from 'vitest';
+import type { MusicProvider, Track } from '$lib/types';
 
 describe('Track type', () => {
 	it('has required Track fields', () => {

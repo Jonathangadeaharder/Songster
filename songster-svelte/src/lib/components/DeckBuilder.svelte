@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Track } from '$lib/types';
+
 	let { onSelect }: { onSelect: (track: Track) => void } = $props();
 
 	let query = $state('');

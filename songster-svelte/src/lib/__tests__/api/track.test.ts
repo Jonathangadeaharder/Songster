@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET as searchGET } from '../../../routes/api/track/search/+server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET as trackGET } from '../../../routes/api/track/[id]/+server';
+import { GET as searchGET } from '../../../routes/api/track/search/+server';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -27,7 +27,10 @@ describe('/api/track/search', () => {
 		});
 
 		const request = new Request('http://localhost/api/track/search?q=hello&limit=5');
-		const response = await searchGET({ request, url: new URL(request.url) } as any);
+		const response = await searchGET({
+			request,
+			url: new URL(request.url),
+		} as any);
 		const json = await response.json();
 
 		expect(response.status).toBe(200);
@@ -43,9 +46,15 @@ describe('/api/track/search', () => {
 	});
 
 	it('returns empty array for no results', async () => {
-		mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: [] }) });
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ data: [] }),
+		});
 		const request = new Request('http://localhost/api/track/search?q=xyz');
-		const response = await searchGET({ request, url: new URL(request.url) } as any);
+		const response = await searchGET({
+			request,
+			url: new URL(request.url),
+		} as any);
 		const json = await response.json();
 		expect(json).toEqual([]);
 	});
@@ -57,9 +66,12 @@ describe('/api/track/search', () => {
 			headers: new Headers({ 'Retry-After': '10' }),
 		});
 		const request = new Request('http://localhost/api/track/search?q=test');
-		await expect(searchGET({ request, url: new URL(request.url) } as any)).rejects.toMatchObject({
-			status: 503,
-		});
+		const response = await searchGET({
+			request,
+			url: new URL(request.url),
+		} as any);
+		expect(response.status).toBe(503);
+		expect(response.headers.get('Retry-After')).toBe('10');
 	});
 
 	it('returns 502 on network error', async () => {
@@ -104,7 +116,11 @@ describe('/api/track/[id]', () => {
 		mockFetch.mockResolvedValue({ ok: false, status: 404 });
 		const request = new Request('http://localhost/api/track/999');
 		await expect(
-			trackGET({ request, params: { id: '999' }, url: new URL(request.url) } as any)
+			trackGET({
+				request,
+				params: { id: '999' },
+				url: new URL(request.url),
+			} as any)
 		).rejects.toMatchObject({ status: 404 });
 	});
 });

@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse, http } from 'msw';
 import searchFixture from '../test-fixtures/deezer-search-response.json';
 import trackFixture from '../test-fixtures/deezer-track-response.json';
 

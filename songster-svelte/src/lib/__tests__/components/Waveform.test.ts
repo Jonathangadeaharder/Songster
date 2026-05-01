@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 import Waveform from '$lib/components/Waveform.svelte';
 
 const mockGetByteFrequencyData = vi.fn();

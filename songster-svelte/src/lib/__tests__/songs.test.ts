@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-	SONG_DECK,
-	shuffled,
-	seededPlayers,
 	buildDrawPile,
-	validatePlacement,
 	findCorrectSlot,
+	SONG_DECK,
+	seededPlayers,
+	shuffled,
 	trackToSong,
+	validatePlacement,
 } from '$lib/songs';
 import type { Song, Track } from '$lib/types';
 
@@ -107,9 +107,27 @@ describe('buildDrawPile', () => {
 });
 
 describe('validatePlacement', () => {
-	const card1980: Song = { id: 'x1', num: 99, title: 'Test', artist: 'Test', year: 1980 };
-	const card1970: Song = { id: 'x2', num: 98, title: 'Test', artist: 'Test', year: 1970 };
-	const card1990: Song = { id: 'x3', num: 97, title: 'Test', artist: 'Test', year: 1990 };
+	const card1980: Song = {
+		id: 'x1',
+		num: 99,
+		title: 'Test',
+		artist: 'Test',
+		year: 1980,
+	};
+	const card1970: Song = {
+		id: 'x2',
+		num: 98,
+		title: 'Test',
+		artist: 'Test',
+		year: 1970,
+	};
+	const card1990: Song = {
+		id: 'x3',
+		num: 97,
+		title: 'Test',
+		artist: 'Test',
+		year: 1990,
+	};
 
 	it('accepts placement at beginning when card year <= first song', () => {
 		const timeline: Song[] = [{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1985 }];
@@ -165,19 +183,37 @@ describe('findCorrectSlot', () => {
 			{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1970 },
 			{ id: 'b', num: 2, title: 'B', artist: 'X', year: 1990 },
 		];
-		const card: Song = { id: 'x', num: 99, title: 'X', artist: 'Y', year: 1980 };
+		const card: Song = {
+			id: 'x',
+			num: 99,
+			title: 'X',
+			artist: 'Y',
+			year: 1980,
+		};
 		expect(findCorrectSlot(timeline, card)).toBe(1);
 	});
 
 	it('returns 0 when card is oldest', () => {
 		const timeline: Song[] = [{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1980 }];
-		const card: Song = { id: 'x', num: 99, title: 'X', artist: 'Y', year: 1970 };
+		const card: Song = {
+			id: 'x',
+			num: 99,
+			title: 'X',
+			artist: 'Y',
+			year: 1970,
+		};
 		expect(findCorrectSlot(timeline, card)).toBe(0);
 	});
 
 	it('returns length when card is newest', () => {
 		const timeline: Song[] = [{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1980 }];
-		const card: Song = { id: 'x', num: 99, title: 'X', artist: 'Y', year: 1990 };
+		const card: Song = {
+			id: 'x',
+			num: 99,
+			title: 'X',
+			artist: 'Y',
+			year: 1990,
+		};
 		expect(findCorrectSlot(timeline, card)).toBe(1);
 	});
 
@@ -186,7 +222,13 @@ describe('findCorrectSlot', () => {
 			{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1990 },
 			{ id: 'b', num: 2, title: 'B', artist: 'X', year: 1970 },
 		];
-		const card: Song = { id: 'x', num: 99, title: 'X', artist: 'Y', year: 1980 };
+		const card: Song = {
+			id: 'x',
+			num: 99,
+			title: 'X',
+			artist: 'Y',
+			year: 1980,
+		};
 		expect(findCorrectSlot(timeline, card)).toBe(0);
 	});
 });

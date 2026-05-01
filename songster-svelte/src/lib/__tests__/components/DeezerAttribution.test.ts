@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
+import { describe, expect, it } from 'vitest';
 import DeezerAttribution from '$lib/components/DeezerAttribution.svelte';
 
 describe('DeezerAttribution', () => {
@@ -9,7 +9,9 @@ describe('DeezerAttribution', () => {
 	});
 
 	it('links to Deezer when trackUrl provided', () => {
-		render(DeezerAttribution, { props: { trackUrl: 'https://deezer.com/track/123' } });
+		render(DeezerAttribution, {
+			props: { trackUrl: 'https://deezer.com/track/123' },
+		});
 		const link = screen.getByRole('link');
 		expect(link).toHaveAttribute('href', 'https://deezer.com/track/123');
 	});

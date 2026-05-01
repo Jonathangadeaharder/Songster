@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { deezerProvider } from '$lib/provider/deezer';
-import type { Track } from '$lib/types';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -20,7 +19,11 @@ describe('deezerProvider.search', () => {
 							id: 12345,
 							title: 'Test Song',
 							artist: { name: 'Test Artist' },
-							album: { title: 'Test Album', cover_small: 'cs.jpg', cover_medium: 'cm.jpg' },
+							album: {
+								title: 'Test Album',
+								cover_small: 'cs.jpg',
+								cover_medium: 'cm.jpg',
+							},
 							preview: 'https://example.com/preview.mp3',
 							duration: 30,
 						},
@@ -38,7 +41,10 @@ describe('deezerProvider.search', () => {
 	});
 
 	it('returns empty array on empty results', async () => {
-		mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: [] }) });
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ data: [] }),
+		});
 		const results = await deezerProvider.search('xyz');
 		expect(results).toEqual([]);
 	});
@@ -63,7 +69,11 @@ describe('deezerProvider.getTrack', () => {
 					id: 12345,
 					title: 'Test Song',
 					artist: { name: 'Test Artist' },
-					album: { title: 'Test Album', cover_small: 'cs.jpg', cover_medium: 'cm.jpg' },
+					album: {
+						title: 'Test Album',
+						cover_small: 'cs.jpg',
+						cover_medium: 'cm.jpg',
+					},
 					preview: 'https://example.com/preview.mp3',
 					duration: 30,
 				}),
@@ -78,5 +88,46 @@ describe('deezerProvider.getTrack', () => {
 		mockFetch.mockResolvedValue({ ok: false, status: 404 });
 		const track = await deezerProvider.getTrack(99999);
 		expect(track).toBeNull();
+	});
+
+	it('returns null on network error', async () => {
+		mockFetch.mockRejectedValue(new Error('network'));
+		const track = await deezerProvider.getTrack(1);
+		expect(track).toBeNull();
+	});
+
+	it('handles missing optional fields', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					id: 12345,
+					title: 'Test Song',
+					artist: { name: 'Test Artist' },
+					preview: undefined,
+					duration: undefined,
+				}),
+		});
+
+		const track = await deezerProvider.getTrack(12345);
+		expect(track).not.toBeNull();
+		expect(track?.preview_url).toBe('');
+		expect(track?.duration).toBe(30);
+		expect(track?.cover_small).toBeNull();
+	});
+});
+
+describe('deezerProvider.search edge cases', () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('handles missing data array', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toEqual([]);
 	});
 });

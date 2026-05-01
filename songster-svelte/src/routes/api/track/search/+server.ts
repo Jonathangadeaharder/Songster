@@ -1,13 +1,13 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error, json } from '@sveltejs/kit';
 import type { Track } from '$lib/types';
+import type { RequestHandler } from './$types';
 
 const DEEZER_API = 'https://api.deezer.com';
 const cache = new Map<string, { data: Track[]; expires: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 100;
 
-function mapDeezerTrack(data: any): Track {
+function mapDeezerTrack(data: Record<string, unknown>): Track {
 	return {
 		id: `dz-${data.id}`,
 		num: data.id,
@@ -55,8 +55,12 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		if (res.status === 429) {
 			const retryAfter = res.headers.get('Retry-After') ?? '60';
-			throw error(503, 'Rate limited by music provider', {
-				headers: { 'Retry-After': retryAfter },
+			return new Response(JSON.stringify({ message: 'Rate limited by music provider' }), {
+				status: 503,
+				headers: {
+					'Content-Type': 'application/json',
+					'Retry-After': retryAfter,
+				},
 			});
 		}
 

@@ -1,8 +1,8 @@
-import type { Track, MusicProvider } from '$lib/types';
+import type { MusicProvider, Track } from '$lib/types';
 
 const DEEZER_API = 'https://api.deezer.com';
 
-function mapDeezerTrack(data: any): Track {
+function mapDeezerTrack(data: Record<string, unknown>): Track {
 	return {
 		id: `dz-${data.id}`,
 		num: data.id,

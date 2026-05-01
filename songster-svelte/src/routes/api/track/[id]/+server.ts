@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error, json } from '@sveltejs/kit';
 import type { Track } from '$lib/types';
+import type { RequestHandler } from './$types';
 
 const DEEZER_API = 'https://api.deezer.com';
 
-function mapDeezerTrack(data: any): Track {
+function mapDeezerTrack(data: Record<string, unknown>): Track {
 	return {
 		id: `dz-${data.id}`,
 		num: data.id,
@@ -21,7 +21,7 @@ function mapDeezerTrack(data: any): Track {
 
 export const GET: RequestHandler = async ({ params }) => {
 	const deezerId = parseInt(params.id, 10);
-	if (isNaN(deezerId)) {
+	if (Number.isNaN(deezerId)) {
 		throw error(400, 'Invalid track ID');
 	}
 

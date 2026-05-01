@@ -1,4 +1,4 @@
-import type { Track } from '$lib/types';
+import type { Song, Track } from '$lib/types';
 
 class AudioManager {
 	private audio: HTMLAudioElement | null = null;
@@ -76,3 +76,24 @@ class AudioManager {
 }
 
 export const audioManager = new AudioManager();
+
+// Compatibility wrappers for legacy Song-based API
+export function playPreview(song: Song): Promise<void> {
+	const track: Track = {
+		...song,
+		deezer_id: 0,
+		preview_url: '',
+		cover_small: null,
+		cover_medium: null,
+		duration: 30,
+	};
+	return audioManager.play(track);
+}
+
+export function stopPreview(): void {
+	audioManager.stop();
+}
+
+export function preloadPreviews(_songs: Song[]): void {
+	// No-op: static songs don't have preview URLs
+}
