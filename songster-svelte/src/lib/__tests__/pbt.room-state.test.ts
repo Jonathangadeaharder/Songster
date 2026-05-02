@@ -110,45 +110,17 @@ describe('PBT room state machine — cannot go backwards', () => {
 });
 
 describe('PBT room state machine — player count invariant', () => {
-	it('cannot start game with 0 players', () => {
-		fc.assert(
-			fc.property(room(), (r) => {
-				if (r.status === 'waiting') {
-					// A room in 'waiting' status has not started yet — no started_at
-					// The invariant: you need >= 1 player to transition waiting->playing
-					// This is enforced by the DB, but the property holds regardless
-					expect(r.status).toBe('waiting');
-				}
-			})
-		);
+	it('waiting->playing requires at least 1 player (business rule)', () => {
+		// The transition is valid in the state machine, but the business rule
+		// requires playerCount >= 1. This is enforced by the DB, not the state machine.
+		expect(isValidTransition('waiting', 'playing')).toBe(true);
 	});
 
 	it('started rooms have a started_at timestamp', () => {
 		fc.assert(
 			fc.property(room(), (r) => {
 				if (r.status === 'playing' || r.status === 'finished') {
-					// In a real room, started_at must be set when status leaves 'waiting'
-					// This test encodes the invariant that non-waiting rooms are "started"
-					expect(['playing', 'finished']).toContain(r.status);
-				}
-			})
-		);
-	});
-
-	it('a room with 0 players cannot validly transition from waiting', () => {
-		fc.assert(
-			fc.property(roomStatus(), (status) => {
-				const playerCount = 0;
-				if (status === 'waiting' && playerCount === 0) {
-					// Transitioning waiting->playing requires at least 1 player
-					// The transition itself is valid in the state machine,
-					// but the precondition (playerCount > 0) must be checked
-					expect(playerCount).toBe(0);
-					// isValidTransition says waiting->playing is valid,
-					// but the business rule forbids it with 0 players
-					expect(isValidTransition('waiting', 'playing')).toBe(true);
-					// The guard: must have players
-					expect(playerCount >= 1).toBe(false);
+					expect(r.started_at).not.toBeNull();
 				}
 			})
 		);

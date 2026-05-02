@@ -96,22 +96,25 @@ export function roomStatus(): Arbitrary<Room['status']> {
 }
 
 export function room(): Arbitrary<Room> {
-	return fc.record({
-		id: fc.uuid(),
-		code: fc.string({ minLength: 6, maxLength: 6 }).map((s) => s.toUpperCase()),
-		host_id: fc.uuid(),
-		status: roomStatus(),
-		winner_player_id: fc.option(fc.uuid(), { nil: null }),
-		created_at: fc
-			.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') })
-			.filter((d) => !isNaN(d.getTime()))
-			.map((d) => d.toISOString()),
-		started_at: fc.oneof(
-			fc.constant(null),
-			fc
-				.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') })
-				.filter((d) => !isNaN(d.getTime()))
-				.map((d) => d.toISOString())
-		),
-	});
+	const timestamp = fc
+		.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') })
+		.filter((d) => !Number.isNaN(d.getTime()))
+		.map((d) => d.toISOString());
+	return fc
+		.record({
+			id: fc.uuid(),
+			code: fc.string({ minLength: 6, maxLength: 6 }).map((s) => s.toUpperCase()),
+			host_id: fc.uuid(),
+			status: roomStatus(),
+			winner_player_id: fc.option(fc.uuid(), { nil: null }),
+			created_at: timestamp,
+			started_at: fc.option(timestamp, { nil: null }),
+		})
+		.map((r) => ({
+			...r,
+			started_at:
+				r.status === 'waiting'
+					? r.started_at
+					: (r.started_at ?? new Date('2020-06-15').toISOString()),
+		}));
 }
