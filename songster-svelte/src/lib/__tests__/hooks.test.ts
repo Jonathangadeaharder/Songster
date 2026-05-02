@@ -32,9 +32,10 @@ vi.mock('$env/static/public', () => ({
 
 import { handle } from '../../hooks.server';
 
-function makeEvent() {
+function makeEvent(pathname = '/') {
 	const cookies: Record<string, string> = {};
 	return {
+		url: new URL(`http://localhost${pathname}`),
 		cookies: {
 			getAll: () => Object.entries(cookies).map(([name, value]) => ({ name, value })),
 			set: vi.fn((name: string, value: string, _opts?: Record<string, unknown>) => {

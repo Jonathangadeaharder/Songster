@@ -1,11 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Session } from '@supabase/supabase-js';
-import type { Handle } from '@sveltejs/kit';
+import { redirect, type Handle } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
 
 const isPlaceholder =
 	PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' &&
 	PUBLIC_SUPABASE_ANON_KEY === 'placeholder-anon-key';
+
+const PUBLIC_ROUTES = ['/', '/login', '/lobby/DEMO', '/health'];
+
+function isPublicRoute(pathname: string): boolean {
+	if (PUBLIC_ROUTES.includes(pathname)) return true;
+	if (pathname.startsWith('/login')) return true;
+	return false;
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (isPlaceholder) {
@@ -68,6 +76,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		} = await event.locals.supabase.auth.getSession();
 		return { session };
 	};
+
+	if (!isPublicRoute(event.url.pathname)) {
+		const { session } = await event.locals.safeGetSession();
+		if (!session) {
+			throw redirect(303, '/login');
+		}
+	}
 
 	return resolve(event, {
 		filterSerializedResponseHeaders: (name) => name === 'content-range',
