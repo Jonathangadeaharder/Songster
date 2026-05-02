@@ -117,12 +117,18 @@ jobs:
 
       - name: Verify health endpoint
         run: |
+          trap 'docker rm -f songster-test >/dev/null 2>&1 || true' EXIT
           docker run -d --name songster-test \
             -e PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
             -e PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key \
             -p 3000:3000 \
             songster-svelte:ci
-          sleep 5
-          curl -sf http://localhost:3000/health | grep '"status":"ok"'
-          docker stop songster-test
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs songster-test >&2
+          exit 1
         working-directory: songster-svelte

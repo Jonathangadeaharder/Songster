@@ -37,15 +37,15 @@ for file in "$MIGRATIONS_DIR"/*.sql; do
     [ -f "$file" ] || continue
     name="$(basename "$file")"
 
-    already=$(psql "$DB_URL" -t -A -c "SELECT 1 FROM _migrations WHERE name = '$name'" 2>/dev/null || true)
+    escaped_name="${name//\'/'\''}"
+    already=$(psql "$DB_URL" -t -A -c "SELECT 1 FROM _migrations WHERE name = '$escaped_name'")
     if [ "$already" = "1" ]; then
         echo "  skip  $name"
         continue
     fi
 
     echo "  apply $name"
-    psql "$DB_URL" -q -f "$file"
-    psql "$DB_URL" -q -c "INSERT INTO _migrations (name) VALUES ('$name');"
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -1 -q -f "$file" -c "INSERT INTO _migrations (name) VALUES ('$escaped_name');"
 done
 
 echo "Migrations complete."

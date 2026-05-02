@@ -4,8 +4,6 @@ FROM node:22-slim AS builder
 ARG PUBLIC_SUPABASE_URL
 ARG PUBLIC_SUPABASE_ANON_KEY
 
-RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
