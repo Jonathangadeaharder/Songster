@@ -2,9 +2,15 @@
 	import '$lib/tokens.css';
 	import type { Snippet } from 'svelte';
 	import { tweaks } from '$lib/stores/tweaks';
+	import { initAuth } from '$lib/stores/auth';
 	import AuthBar from '$lib/components/AuthBar.svelte';
+	import type { LayoutData } from './$types';
 
-	let { children }: { children: Snippet } = $props();
+	let { children, data }: { children: Snippet; data: LayoutData } = $props();
+
+	$effect(() => {
+		initAuth(data.session);
+	});
 
 	// Sync theme token to <html data-theme> so CSS custom properties apply
 	$effect(() => {

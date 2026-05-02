@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { browser } from '$app/environment';
 import { supabase } from '$lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -6,17 +7,22 @@ export const user = writable<User | null>(null);
 export const session = writable<Session | null>(null);
 export const loading = writable(true);
 
-supabase.auth.getSession().then(({ data }) => {
-	session.set(data.session);
-	user.set(data.session?.user ?? null);
-	loading.set(false);
-});
+let initialised = false;
 
-supabase.auth.onAuthStateChange((_event, sess) => {
-	session.set(sess);
-	user.set(sess?.user ?? null);
+export function initAuth(serverSession: Session | null) {
+	session.set(serverSession);
+	user.set(serverSession?.user ?? null);
 	loading.set(false);
-});
+
+	if (browser && !initialised) {
+		initialised = true;
+		supabase.auth.onAuthStateChange((_event, sess) => {
+			session.set(sess);
+			user.set(sess?.user ?? null);
+			loading.set(false);
+		});
+	}
+}
 
 export async function signIn(email: string, password: string) {
 	const { error } = await supabase.auth.signInWithPassword({ email, password });

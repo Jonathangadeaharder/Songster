@@ -7,18 +7,14 @@ const isPlaceholder =
 	PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' &&
 	PUBLIC_SUPABASE_ANON_KEY === 'placeholder-anon-key';
 
-const PUBLIC_ROUTES = ['/', '/login', '/lobby/DEMO', '/health'];
+const PUBLIC_ROUTES = ['/', '/lobby/DEMO', '/health'];
 
 function isPublicRoute(pathname: string): boolean {
-	if (PUBLIC_ROUTES.includes(pathname)) return true;
-	if (pathname.startsWith('/login')) return true;
-	return false;
+	return pathname.startsWith('/login') || PUBLIC_ROUTES.includes(pathname);
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (isPlaceholder) {
-		// CI / E2E mode: skip real Supabase auth and provide a dummy session so
-		// server-side route guards pass without redirecting to /auth/login.
 		event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 			cookies: {
 				getAll: () => event.cookies.getAll(),
@@ -44,43 +40,47 @@ export const handle: Handle = async ({ event, resolve }) => {
 				token_type: 'bearer',
 			} as unknown as Session,
 		});
-		return resolve(event, {
-			filterSerializedResponseHeaders: (name) => name === 'content-range',
-		});
-	}
-
-	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		cookies: {
-			getAll: () => event.cookies.getAll(),
-			setAll: (
-				cookies: {
-					name: string;
-					value: string;
-					options: Record<string, unknown>;
-				}[]
-			) => {
-				for (const { name, value, options } of cookies) {
-					event.cookies.set(name, value, { ...options, path: '/' });
-				}
+	} else {
+		event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			cookies: {
+				getAll: () => event.cookies.getAll(),
+				setAll: (
+					cookies: {
+						name: string;
+						value: string;
+						options: Record<string, unknown>;
+					}[]
+				) => {
+					for (const { name, value, options } of cookies) {
+						event.cookies.set(name, value, { ...options, path: '/' });
+					}
+				},
 			},
-		},
-	});
+		});
 
-	event.locals.safeGetSession = async () => {
-		const {
-			data: { user },
-		} = await event.locals.supabase.auth.getUser();
-		if (!user) return { session: null };
-		const {
-			data: { session },
-		} = await event.locals.supabase.auth.getSession();
-		return { session };
-	};
+		event.locals.safeGetSession = async () => {
+			const {
+				data: { user },
+			} = await event.locals.supabase.auth.getUser();
+			if (!user) return { session: null };
+			const {
+				data: { session },
+			} = await event.locals.supabase.auth.getSession();
+			return { session };
+		};
+	}
 
 	if (!isPublicRoute(event.url.pathname)) {
 		const { session } = await event.locals.safeGetSession();
 		if (!session) {
 			throw redirect(303, '/login');
+		}
+	}
+
+	if (event.url.pathname === '/login') {
+		const { session } = await event.locals.safeGetSession();
+		if (session) {
+			throw redirect(303, '/');
 		}
 	}
 
