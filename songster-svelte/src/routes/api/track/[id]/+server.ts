@@ -37,7 +37,14 @@ export const GET: RequestHandler = async ({ params }) => {
 			throw error(404, 'Track not found');
 		}
 		if (res.status === 429) {
-			throw error(503, 'Music provider rate limited');
+			const retryAfter = res.headers.get('Retry-After') ?? '60';
+			return new Response(JSON.stringify({ message: 'Rate limited by music provider' }), {
+				status: 503,
+				headers: {
+					'Content-Type': 'application/json',
+					'Retry-After': retryAfter,
+				},
+			});
 		}
 		if (!res.ok) {
 			throw error(502, 'Music provider unavailable');

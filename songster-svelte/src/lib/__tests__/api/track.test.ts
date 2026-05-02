@@ -123,4 +123,20 @@ describe('/api/track/[id]', () => {
 			} as any)
 		).rejects.toMatchObject({ status: 404 });
 	});
+
+	it('returns 503 with Retry-After on Deezer rate limit', async () => {
+		mockFetch.mockResolvedValue({
+			ok: false,
+			status: 429,
+			headers: new Headers({ 'Retry-After': '15' }),
+		});
+		const request = new Request('http://localhost/api/track/1');
+		const response = await trackGET({
+			request,
+			params: { id: '1' },
+			url: new URL(request.url),
+		} as any);
+		expect(response.status).toBe(503);
+		expect(response.headers.get('Retry-After')).toBe('15');
+	});
 });
