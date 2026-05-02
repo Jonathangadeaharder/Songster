@@ -14,6 +14,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.45.0
         version: 2.104.1
+      highlight.run:
+        specifier: ^10.2.0
+        version: 10.2.0
       svelte-dnd-action:
         specifier: ^0.9.0
         version: 0.9.69(svelte@5.55.5)
@@ -605,6 +608,15 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@launchdarkly/js-client-sdk-common@1.26.2':
+    resolution: {integrity: sha512-cofpb9WFeXEomOompbqPzQ7cKavW+CKr4rcBClicjt/mHXiru0y7wWnEf7VCqi0WnVmIJ10ovta3kkPd5/MqTg==}
+
+  '@launchdarkly/js-client-sdk@4.6.4':
+    resolution: {integrity: sha512-WtCwE0xZ0P87MmM3IPsJh93neYb1hl40mfd73pcE86e3tW4dsNQDDW/m+LQIN5t/ZsDLCKJGIIJMPOZZOsDrQg==}
+
+  '@launchdarkly/js-sdk-common@2.24.3':
+    resolution: {integrity: sha512-KQaaHJcFOKvdiLIcS9f70tYLyENOmBvKI9sEKiMc43BwTwDW3AS0jyoKyCw3jCQL/sYv1+oX3VLk1urbdphGPg==}
 
   '@mswjs/interceptors@0.41.6':
     resolution: {integrity: sha512-qmDvJIjcNsZ6tXWy2G9yuCgMPTTn35GMA3dPpSLm7QJVpbQzYdw0ALy1bKoivXnEM3U93/OrK+/M719b+fg84Q==}
@@ -1344,6 +1356,9 @@ packages:
   headers-polyfill@5.0.1:
     resolution: {integrity: sha512-1TJ6Fih/b8h5TIcv+1+Hw0PDQWJTKDKzFZzcKOiW1wJza3XoAQlkCuXLbymPYB8+ZQyw8mHvdw560e8zVFIWyA==}
 
+  highlight.run@10.2.0:
+    resolution: {integrity: sha512-N1dah0gB3kXzfezlEPlp5566yMdBLa6UIQ43JVXqYCzvqd0A+ySo4NcTYcDQh/Xvj4y16/jfekzQpHsPGQn7qw==}
+
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
@@ -1362,6 +1377,10 @@ packages:
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
+
+  imurmurhash@0.1.4:
+    resolution: {integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==}
+    engines: {node: '>=0.8.19'}
 
   indent-string@4.0.0:
     resolution: {integrity: sha512-EdDDZu4A2OyIK7Lr/2zG+w5jmbuk1DVBnEwREQvBzspBJkCEbRa8GxU1lghYcaGJCnRWibjDXlq779X1/y5xwg==}
@@ -2531,6 +2550,16 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@launchdarkly/js-client-sdk-common@1.26.2':
+    dependencies:
+      '@launchdarkly/js-sdk-common': 2.24.3
+
+  '@launchdarkly/js-client-sdk@4.6.4':
+    dependencies:
+      '@launchdarkly/js-client-sdk-common': 1.26.2
+
+  '@launchdarkly/js-sdk-common@2.24.3': {}
+
   '@mswjs/interceptors@0.41.6':
     dependencies:
       '@open-draft/deferred-promise': 2.2.0
@@ -3271,6 +3300,11 @@ snapshots:
       '@types/set-cookie-parser': 2.4.10
       set-cookie-parser: 3.1.0
 
+  highlight.run@10.2.0:
+    dependencies:
+      '@launchdarkly/js-client-sdk': 4.6.4
+      imurmurhash: 0.1.4
+
   html-encoding-sniffer@6.0.0:
     dependencies:
       '@exodus/bytes': 1.15.0
@@ -3286,6 +3320,8 @@ snapshots:
   iconv-lite@0.7.2:
     dependencies:
       safer-buffer: 2.1.2
+
+  imurmurhash@0.1.4: {}
 
   indent-string@4.0.0: {}
 

@@ -7,7 +7,7 @@ vi.mock('$lib/audio', () => ({
 }));
 
 import { get } from 'svelte/store';
-import { findCorrectSlot } from '$lib/songs';
+import { findCorrectSlot, validatePlacement } from '$lib/songs';
 import { game } from '$lib/stores/game';
 
 afterEach(() => {
@@ -138,6 +138,27 @@ describe('game.onPlace', () => {
 		const after = get(game.players).find((p) => p.id === 'p1')!;
 		expect(after.timeline.length).toBe(me.timeline.length + 1);
 		expect(after.timeline).toContainEqual(card);
+	});
+
+	it('does not add card to timeline on incorrect placement', () => {
+		vi.useFakeTimers();
+
+		const fakeTimeline = [
+			{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1970 } as const,
+			{ id: 'b', num: 2, title: 'B', artist: 'X', year: 1990 } as const,
+		];
+		const wrongCard = { id: 'w', num: 99, title: 'W', artist: 'Y', year: 1980 };
+
+		game.players.update((ps) =>
+			ps.map((p) => (p.id === 'p1' ? { ...p, timeline: [...fakeTimeline] } : p))
+		);
+		game.activeCard.set(wrongCard);
+		game.phase.set('place');
+
+		game.onPlace(0);
+		expect(get(game.placedResult)).toBe(false);
+		const after = get(game.players).find((p) => p.id === 'p1')!;
+		expect(after.timeline.length).toBe(2);
 	});
 });
 
@@ -444,6 +465,17 @@ describe('game.startGame — guard condition', () => {
 	});
 });
 
+describe('game.drawNext — empty pile', () => {
+	it('does nothing when draw pile is empty', () => {
+		game.onReplay();
+		game.startGame();
+		game.drawPile.set([]);
+		const cardBefore = get(game.activeCard);
+		game.drawNext();
+		expect(get(game.activeCard)).toEqual(cardBefore);
+	});
+});
+
 describe('game.onPlay — no activeCard', () => {
 	it('does not call playPreview when card is null', () => {
 		game.onReplay();
@@ -575,8 +607,16 @@ describe('game.runAiTurn — placement outcomes', () => {
 		const aiPlayer = get(game.players).find((p) => p.id === get(game.activePlayerId))!;
 		const correct = findCorrectSlot(aiPlayer.timeline, card);
 
-		let wrongSlot = correct === 0 ? aiPlayer.timeline.length : 0;
-		if (wrongSlot === correct) wrongSlot = (correct + 1) % (aiPlayer.timeline.length + 1);
+		let wrongSlot = -1;
+		for (let s = 0; s <= aiPlayer.timeline.length; s++) {
+			if (s !== correct && !validatePlacement(aiPlayer.timeline, card, s)) {
+				wrongSlot = s;
+				break;
+			}
+		}
+		if (wrongSlot === -1) {
+			throw new Error('Test setup error: no invalid slot found for AI timeline');
+		}
 
 		const mathSpy = vi.spyOn(Math, 'random');
 		mathSpy.mockReturnValueOnce(0);

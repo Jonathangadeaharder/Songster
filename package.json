@@ -3,7 +3,10 @@
   "private": true,
   "description": "Monorepo root — manages git hooks only. App lives in songster-svelte/.",
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "highlight:start": "docker compose -f docker-compose.highlight.yml up -d",
+    "highlight:stop": "docker compose -f docker-compose.highlight.yml down",
+    "highlight:logs": "docker compose -f docker-compose.highlight.yml logs -f"
   },
   "devDependencies": {
     "husky": "^9.1.7",

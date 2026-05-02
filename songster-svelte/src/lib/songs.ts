@@ -188,11 +188,14 @@ export function validatePlacement(timeline: Song[], card: Song, slot: number): b
 }
 
 export function findCorrectSlot(timeline: Song[], card: Song): number {
+	let slot = timeline.length;
 	for (let i = 0; i <= timeline.length; i++) {
 		const afterPrev = i === 0 || timeline[i - 1].year <= card.year;
 		const beforeNext = i === timeline.length || card.year <= timeline[i].year;
-		if (afterPrev && beforeNext) return i;
+		if (afterPrev && beforeNext) {
+			slot = i;
+			break;
+		}
 	}
-	/* v8 ignore next */
-	return -1;
+	return slot;
 }

@@ -202,4 +202,46 @@ describe('deezerProvider - mapDeezerTrack branch coverage', () => {
 		expect(results).toHaveLength(1);
 		expect(results[0].preview_url).toBe('');
 	});
+
+	it('handles invalid release_date format (NaN year)', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					data: [
+						{
+							id: 666,
+							title: 'Bad Date',
+							artist: { name: 'Test' },
+							release_date: 'not-a-date',
+							preview: 'https://example.com/preview.mp3',
+						},
+					],
+				}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toHaveLength(1);
+		expect(results[0].year).toBe(0);
+	});
+
+	it('parses valid release_date year', async () => {
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					data: [
+						{
+							id: 555,
+							title: 'Good Date',
+							artist: { name: 'Test' },
+							release_date: '2015-06-01',
+							preview: 'https://example.com/preview.mp3',
+						},
+					],
+				}),
+		});
+		const results = await deezerProvider.search('test');
+		expect(results).toHaveLength(1);
+		expect(results[0].year).toBe(2015);
+	});
 });

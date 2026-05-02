@@ -169,4 +169,35 @@ describe('AudioManager', () => {
 		};
 		await expect(audioManager.play(track)).resolves.toBeUndefined();
 	});
+
+	it('returns early when signal is already aborted', async () => {
+		const originalAbortController = globalThis.AbortController;
+		vi.stubGlobal(
+			'AbortController',
+			class {
+				signal = { aborted: true };
+				abort() {
+					this.signal.aborted = true;
+				}
+			}
+		);
+
+		const { audioManager } = await getAudio();
+		const track: Track = {
+			id: 'dz-1',
+			num: 1,
+			title: 'Song',
+			artist: 'Artist',
+			year: 2020,
+			deezer_id: 1,
+			preview_url: 'https://example.com/preview.mp3',
+			cover_small: null,
+			cover_medium: null,
+			duration: 30,
+		};
+		await audioManager.play(track);
+		expect(audioConstructCount).toBe(0);
+
+		vi.stubGlobal('AbortController', originalAbortController);
+	});
 });

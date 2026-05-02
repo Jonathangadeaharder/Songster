@@ -92,6 +92,29 @@ describe('getRoomPlayers', () => {
 		expect(mockFrom).toHaveBeenCalledWith('players');
 		expect(result).toEqual(players);
 	});
+
+	it('throws on error', async () => {
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: null, error: new Error('db fail') }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		await expect(getRoomPlayers('room-1')).rejects.toThrow('db fail');
+	});
+
+	it('returns empty array on null data', async () => {
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: null, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getRoomPlayers('room-1');
+		expect(result).toEqual([]);
+	});
 });
 
 describe('getRoomByCode', () => {
@@ -313,6 +336,47 @@ describe('subscribeToRoom', () => {
 		expect(mockChannel).toHaveBeenCalledWith('room:room-1');
 		expect(mockOn).toHaveBeenCalledTimes(4);
 		expect(mockSubscribe).toHaveBeenCalled();
+	});
+
+	it('invokes callback with correct shape for each table', async () => {
+		const callbacks: Record<
+			string,
+			(payload: { eventType: string; new: Record<string, unknown> }) => void
+		> = {};
+		let callIndex = 0;
+		const tables = ['game_state', 'players', 'timelines', 'rooms'];
+
+		const mockOn = vi.fn().mockImplementation((_event: string, _filter: unknown, cb: unknown) => {
+			const key = tables[callIndex++];
+			callbacks[key] = cb as (payload: { eventType: string; new: Record<string, unknown> }) => void;
+			return { on: mockOn, subscribe: vi.fn() };
+		});
+
+		const mockChannel = vi.fn().mockReturnValue({ on: mockOn, subscribe: vi.fn() });
+
+		const { supabase } = await import('$lib/supabase');
+		supabase.channel = mockChannel;
+
+		const callback = vi.fn();
+		subscribeToRoom('room-1', callback);
+
+		for (const table of tables) {
+			callbacks[table]({ eventType: 'INSERT', new: { id: '1' } });
+		}
+
+		expect(callback).toHaveBeenCalledTimes(4);
+		expect(callback).toHaveBeenCalledWith({
+			event: 'INSERT',
+			table: 'game_state',
+			new: { id: '1' },
+		});
+		expect(callback).toHaveBeenCalledWith({ event: 'INSERT', table: 'players', new: { id: '1' } });
+		expect(callback).toHaveBeenCalledWith({
+			event: 'INSERT',
+			table: 'timelines',
+			new: { id: '1' },
+		});
+		expect(callback).toHaveBeenCalledWith({ event: 'INSERT', table: 'rooms', new: { id: '1' } });
 	});
 });
 
