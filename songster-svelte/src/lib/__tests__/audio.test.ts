@@ -172,17 +172,12 @@ describe('AudioManager', () => {
 
 	it('returns early when signal is already aborted', async () => {
 		const originalAbortController = globalThis.AbortController;
-		let abortControllerInstance: { signal: { aborted: boolean }; abort: () => void } | null = null;
-
 		vi.stubGlobal(
 			'AbortController',
 			class {
 				signal = { aborted: true };
 				abort() {
 					this.signal.aborted = true;
-				}
-				constructor() {
-					abortControllerInstance = this;
 				}
 			}
 		);

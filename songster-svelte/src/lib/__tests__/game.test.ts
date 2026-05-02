@@ -7,7 +7,7 @@ vi.mock('$lib/audio', () => ({
 }));
 
 import { get } from 'svelte/store';
-import { findCorrectSlot } from '$lib/songs';
+import { findCorrectSlot, validatePlacement } from '$lib/songs';
 import { game } from '$lib/stores/game';
 
 afterEach(() => {
@@ -607,8 +607,23 @@ describe('game.runAiTurn — placement outcomes', () => {
 		const aiPlayer = get(game.players).find((p) => p.id === get(game.activePlayerId))!;
 		const correct = findCorrectSlot(aiPlayer.timeline, card);
 
-		let wrongSlot = correct === 0 ? aiPlayer.timeline.length : 0;
-		if (wrongSlot === correct) wrongSlot = (correct + 1) % (aiPlayer.timeline.length + 1);
+		let wrongSlot = -1;
+		for (let s = 0; s <= aiPlayer.timeline.length; s++) {
+			if (s !== correct && !validatePlacement(aiPlayer.timeline, card, s)) {
+				wrongSlot = s;
+				break;
+			}
+		}
+		if (wrongSlot === -1) {
+			const mathSpy = vi.spyOn(Math, 'random');
+			mathSpy.mockReturnValue(0.5);
+			game.runAiTurn();
+			vi.advanceTimersByTime(3300);
+			expect(get(game.placedResult)).toBe(true);
+			mathSpy.mockRestore();
+			vi.useRealTimers();
+			return;
+		}
 
 		const mathSpy = vi.spyOn(Math, 'random');
 		mathSpy.mockReturnValueOnce(0);
