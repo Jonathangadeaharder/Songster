@@ -1,16 +1,26 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import Chrome from '$lib/components/Chrome.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
 	import Rematch from '$lib/components/Rematch.svelte';
 	import { game } from '$lib/stores/game';
-	import { remoteGame } from '$lib/stores/game-remote';
+	import { getRoomByCode } from '$lib/room';
+	import { supabase } from '$lib/supabase';
 
 	let code: string = $derived(page.params.code ?? '');
 	let { winner } = game;
-	let isHostStore = remoteGame.isHost;
-	let isHost = $derived($isHostStore);
+	let isHost = $state(false);
+
+	onMount(async () => {
+		const room = await getRoomByCode(code);
+		if (!room) return;
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (user) isHost = room.host_id === user.id;
+	});
 </script>
 
 <Chrome title="RESULTS · {code}">

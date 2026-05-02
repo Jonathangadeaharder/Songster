@@ -56,8 +56,11 @@ BEGIN
   -- Check win: player has 10 timeline entries
   IF p_correct AND (SELECT COUNT(*) FROM public.timelines WHERE player_id = p_player_id) >= 10 THEN
     UPDATE public.rooms
-    SET winner_player_id = p_player_id, status = 'finished', finished_at = now()
-    WHERE id = target_room.id;
+    SET winner_player_id = p_player_id,
+        status = 'finished',
+        finished_at = COALESCE(finished_at, now())
+    WHERE id = target_room.id
+      AND status <> 'finished';
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -79,6 +82,10 @@ BEGIN
   -- Only host can start rematch
   IF old_room.host_id != auth.uid() THEN
     RAISE EXCEPTION 'Only the host can start a rematch';
+  END IF;
+
+  IF old_room.status <> 'finished' THEN
+    RAISE EXCEPTION 'Rematch is only available after the game finishes';
   END IF;
 
   -- Generate new room code

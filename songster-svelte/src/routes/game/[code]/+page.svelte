@@ -145,7 +145,7 @@
 	$effect(() => {
 		$activePlayerId;
 		untrack(() => {
-			if ($phase === 'draw' && $activePlayerId !== $myPlayerId) {
+			if ($phase === 'draw' && $activePlayerId !== $myPlayerId && $isHost) {
 				if (isDemo) game.runAiTurn();
 				else remoteGame.runAiTurn();
 			}
