@@ -1,15 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import Chrome from '$lib/components/Chrome.svelte';
 	import Wordmark from '$lib/components/Wordmark.svelte';
+	import Rematch from '$lib/components/Rematch.svelte';
 	import { game } from '$lib/stores/game';
+	import { getRoomByCode } from '$lib/room';
+	import { supabase } from '$lib/supabase';
 	import type { Player } from '$lib/types';
 
 	let code: string = $derived(page.params.code ?? '');
 	let { winner, players } = game;
+	let isHost = $state(false);
 
 	let sortedPlayers = $derived([...$players].sort((a, b) => b.timeline.length - a.timeline.length));
+
+	onMount(async () => {
+		const room = await getRoomByCode(code);
+		if (!room) return;
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+		if (user) isHost = room.host_id === user.id;
+	});
 </script>
 
 <Chrome title="RESULTS · {code}">
@@ -20,6 +34,7 @@
 				<div class="winner-label">Winner</div>
 				<div class="winner-name">{$winner?.name ?? 'Nobody'}</div>
 			</div>
+			<Rematch roomCode={code} {isHost} />
 
 			{#if sortedPlayers.length > 0}
 				<div class="stats" aria-label="Final scores">

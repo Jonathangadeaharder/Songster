@@ -19,16 +19,20 @@
 	import TweakRadio from '$lib/components/TweakRadio.svelte';
 	import TweakSlider from '$lib/components/TweakSlider.svelte';
 	import TweakToggle from '$lib/components/TweakToggle.svelte';
-	import { getRoomByCode, getCurrentPlayerInRoom } from '$lib/room';
+	import { getRoomByCode, getCurrentPlayerInRoom, addSpectator } from '$lib/room';
+	import GameStats from '$lib/components/GameStats.svelte';
+	import { supabase } from '$lib/supabase';
 
 	let code: string = $derived(page.params.code ?? '');
 	let t = $derived($tweaks);
 	let { primary, paper } = $derived(colors(t.theme));
+	let isSpectator = $derived(page.url.searchParams.get('spectate') === 'true');
 
 	import { derived, writable } from 'svelte/store';
 	import type { Writable, Readable } from 'svelte/store';
 
 	let isDemo = $derived(code === 'DEMO');
+	let startedAt = $state<string | null>(null);
 	let loading = $state(true);
 	// svelte-ignore state_referenced_locally
 	const mode = writable<'demo' | 'remote'>(code === 'DEMO' ? 'demo' : 'remote');
@@ -76,10 +80,17 @@
 	let activePlayer: Player | undefined = $derived(
 		$players.find((p: Player) => p.id === $activePlayerId)
 	);
-	let me: Player | undefined = $derived($players.find((p: Player) => p.id === $myPlayerId));
-	let myTimeline = $derived(me?.timeline ?? []);
-	let myTokens = $derived(me?.tokens ?? 0);
-	let myLength = $derived(me?.timeline.length ?? 0);
+	let viewedPlayer: Player | undefined = $derived(
+		isSpectator
+			? $players.find((p: Player) => p.id === $activePlayerId)
+			: $players.find((p: Player) => p.id === $myPlayerId)
+	);
+	let me: Player | undefined = $derived(
+		!isSpectator ? $players.find((p: Player) => p.id === $myPlayerId) : undefined
+	);
+	let myTimeline = $derived(viewedPlayer?.timeline ?? []);
+	let myTokens = $derived(viewedPlayer?.tokens ?? 0);
+	let myLength = $derived(viewedPlayer?.timeline.length ?? 0);
 	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === $myPlayerId);
 
 	onMount(() => {
@@ -95,15 +106,33 @@
 			try {
 				const room = await getRoomByCode(code);
 				if (cancelled || !room) return;
-				const playerInfo = await getCurrentPlayerInRoom(room.id);
-				if (cancelled || !playerInfo) return;
 
-				await remoteGame.connectRemoteGame({
-					roomCode: code,
-					roomId: room.id,
-					myPlayerId: playerInfo.playerId,
-					isHost: room.host_id === playerInfo.userId,
-				});
+				startedAt = room.started_at;
+
+				if (isSpectator) {
+					await remoteGame.connectRemoteGame({
+						roomCode: code,
+						roomId: room.id,
+						myPlayerId: '',
+						isHost: false,
+					});
+					const {
+						data: { user },
+					} = await supabase.auth.getUser();
+					if (user) {
+						await addSpectator(room.id, user.id);
+					}
+				} else {
+					const playerInfo = await getCurrentPlayerInRoom(room.id);
+					if (cancelled || !playerInfo) return;
+
+					await remoteGame.connectRemoteGame({
+						roomCode: code,
+						roomId: room.id,
+						myPlayerId: playerInfo.playerId,
+						isHost: room.host_id === playerInfo.userId,
+					});
+				}
 			} catch {
 				toasts.error('Failed to connect to game');
 			} finally {
@@ -120,7 +149,7 @@
 	$effect(() => {
 		$activePlayerId;
 		untrack(() => {
-			if ($phase === 'draw' && $activePlayerId !== $myPlayerId) {
+			if ($phase === 'draw' && $activePlayerId !== $myPlayerId && $isHost) {
 				if (isDemo) game.runAiTurn();
 				else remoteGame.runAiTurn();
 			}
@@ -134,7 +163,7 @@
 	}
 
 	function onCardDragStart(e: DragEvent) {
-		if (!myTurnAndPlacing) {
+		if (isSpectator || !myTurnAndPlacing) {
 			e.preventDefault();
 			return;
 		}
@@ -159,6 +188,7 @@
 	}
 
 	function onSlotDrop(e: DragEvent, i: number) {
+		if (isSpectator) return;
 		e.preventDefault();
 		dragSlot = null;
 		getStore().dragging.set(false);
@@ -166,14 +196,17 @@
 	}
 
 	function onPlay() {
+		if (isSpectator) return;
 		getStore().onPlay();
 	}
 
 	function onNextTurn() {
+		if (isSpectator) return;
 		getStore().onNextTurn();
 	}
 
 	function onChallenge() {
+		if (isSpectator) return;
 		getStore().onChallenge();
 	}
 
@@ -191,7 +224,11 @@
 	<Chrome theme={t.theme} title="Game · {code} · Songster">
 		{#snippet right()}
 			<div class="turn-label" aria-live="polite" aria-label="Current turn">
-				<span style="opacity: 0.6">TURN</span>
+				{#if isSpectator}
+					<span style="opacity: 0.6">SPECTATING</span>
+				{:else}
+					<span style="opacity: 0.6">TURN</span>
+				{/if}
 				<span>{activePlayer?.name}</span>
 			</div>
 		{/snippet}
@@ -214,6 +251,14 @@
 							</div>
 						{/each}
 					</div>
+
+					<GameStats
+						drawPileCount={$drawPile.length}
+						round={$round}
+						players={$players}
+						activePlayerId={$activePlayerId}
+						startTime={startedAt}
+					/>
 
 					<div class="vinyl-section">
 						<Vinyl
@@ -245,9 +290,13 @@
 							{:else if $phase === 'listen'}
 								Listening · 0:30 preview
 							{:else if $phase === 'place'}
-								{$activePlayerId === $myPlayerId
-									? 'Drag the card onto your timeline'
-									: `${activePlayer?.name} is placing…`}
+								{#if isSpectator}
+									{`${activePlayer?.name} is placing…`}
+								{:else}
+									{$activePlayerId === $myPlayerId
+										? 'Drag the card onto your timeline'
+										: `${activePlayer?.name} is placing…`}
+								{/if}
 							{:else if $phase === 'reveal'}
 								{$placedResult ? 'Correct placement' : 'Wrong — card discarded'}
 							{:else if $phase === 'challenge'}
@@ -262,14 +311,16 @@
 								class="card-wrapper"
 								role="group"
 								aria-label="Active card: {$activeCard.title} by {$activeCard.artist}"
-								draggable={myTurnAndPlacing ? 'true' : undefined}
+								draggable={isSpectator ? undefined : myTurnAndPlacing ? 'true' : undefined}
 								ondragstart={onCardDragStart}
 								ondragend={onCardDragEnd}
-								style="cursor: {myTurnAndPlacing
-									? 'grab'
-									: $phase === 'draw' && $activePlayerId === $myPlayerId
-										? 'pointer'
-										: 'default'}; opacity: {$dragging ? 0.3 : 1}"
+								style="cursor: {isSpectator
+									? 'default'
+									: myTurnAndPlacing
+										? 'grab'
+										: $phase === 'draw' && $activePlayerId === $myPlayerId
+											? 'pointer'
+											: 'default'}; opacity: {$dragging ? 0.3 : 1}"
 							>
 								<button
 									disabled={$phase !== 'draw' || $activePlayerId !== $myPlayerId}
@@ -308,7 +359,7 @@
 						{/if}
 					</div>
 
-					{#if t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
+					{#if !isSpectator && t.interceptionEnabled && ($phase === 'place' || $phase === 'challenge') && $activePlayerId !== $myPlayerId}
 						<div class="challenge-bar" role="region" aria-label="Challenge option">
 							<div>
 								<div class="challenge-label">Challenge</div>
@@ -365,15 +416,17 @@
 						{/if}
 
 						{#if $phase === 'reveal'}
-							<div class="next-btn-wrap">
-								<button
-									class="next-btn"
-									style="background: {primary}; color: {paper}"
-									onclick={onNextTurn}
-								>
-									Side B · Next Turn →
-								</button>
-							</div>
+							{#if !isSpectator}
+								<div class="next-btn-wrap">
+									<button
+										class="next-btn"
+										style="background: {primary}; color: {paper}"
+										onclick={onNextTurn}
+									>
+										Side B · Next Turn →
+									</button>
+								</div>
+							{/if}
 						{:else}
 							<div style="height: 16px"></div>
 						{/if}

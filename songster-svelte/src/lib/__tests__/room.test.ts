@@ -14,6 +14,10 @@ import {
 	getCurrentPlayer,
 	getCurrentPlayerInRoom,
 	pickAvatar,
+	addSpectator,
+	getGameHistory,
+	getLeaderboard,
+	createRematch,
 } from '$lib/room';
 
 const { mockRpc, mockFrom, mockAuth } = vi.hoisted(() => ({
@@ -434,5 +438,241 @@ describe('useToken error', () => {
 	it('throws on error', async () => {
 		mockRpc.mockResolvedValue({ data: null, error: new Error('no tokens') });
 		await expect(useToken('ABC', 'p1')).rejects.toThrow('no tokens');
+	});
+});
+
+describe('addSpectator', () => {
+	it('inserts spectator record', async () => {
+		const chain = {
+			insert: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			single: vi.fn().mockResolvedValue({ data: { id: 's1' }, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		await addSpectator('room-1', 'user-1');
+		expect(mockFrom).toHaveBeenCalledWith('spectators');
+		expect(chain.insert).toHaveBeenCalledWith({ room_id: 'room-1', user_id: 'user-1' });
+	});
+
+	it('ignores duplicate key error (23505)', async () => {
+		const chain = {
+			insert: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			single: vi.fn().mockResolvedValue({ data: null, error: { code: '23505' } }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		await expect(addSpectator('room-1', 'user-1')).resolves.not.toThrow();
+	});
+
+	it('throws on other errors', async () => {
+		const chain = {
+			insert: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			single: vi
+				.fn()
+				.mockResolvedValue({ data: null, error: { code: 'OTHER', message: 'db error' } }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		await expect(addSpectator('room-1', 'user-1')).rejects.toThrow('db error');
+	});
+});
+
+describe('getGameHistory', () => {
+	it('returns game history entries for user', async () => {
+		const rooms = [
+			{
+				id: 'r1',
+				code: 'ABC',
+				created_at: '2024-01-01',
+				started_at: '2024-01-01',
+				finished_at: '2024-01-01',
+				game_duration: '5m',
+				players: [
+					{ name: 'Alice', user_id: 'user-1' },
+					{ name: 'Bob', user_id: 'user-2' },
+				],
+				winner: [{ name: 'Alice' }],
+			},
+		];
+
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: rooms, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getGameHistory('user-1');
+		expect(result).toHaveLength(1);
+		expect(result[0].room_code).toBe('ABC');
+		expect(result[0].winner_name).toBe('Alice');
+		expect(result[0].players).toEqual(['Alice', 'Bob']);
+		expect(result[0].player_count).toBe(2);
+	});
+
+	it('returns empty array when no data', async () => {
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: null, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getGameHistory('user-1');
+		expect(result).toEqual([]);
+	});
+
+	it('throws on error', async () => {
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: null, error: new Error('db fail') }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		await expect(getGameHistory('user-1')).rejects.toThrow('db fail');
+	});
+
+	it('handles room with no winner', async () => {
+		const rooms = [
+			{
+				id: 'r1',
+				code: 'ABC',
+				created_at: '2024-01-01',
+				started_at: null,
+				finished_at: null,
+				game_duration: null,
+				players: [{ name: 'Alice', user_id: 'user-1' }],
+				winner: [],
+			},
+		];
+
+		const chain = {
+			select: vi.fn().mockReturnThis(),
+			eq: vi.fn().mockReturnThis(),
+			order: vi.fn().mockResolvedValue({ data: rooms, error: null }),
+		};
+		mockFrom.mockReturnValue(chain);
+
+		const result = await getGameHistory('user-1');
+		expect(result[0].winner_name).toBeNull();
+	});
+});
+
+describe('getLeaderboard', () => {
+	it('returns sorted leaderboard entries', async () => {
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 3,
+				games_won: 3,
+				win_rate: 1,
+				avg_timeline_length: 2,
+			},
+			{
+				user_id: 'u2',
+				name: 'Bob',
+				games_played: 3,
+				games_won: 3,
+				win_rate: 1,
+				avg_timeline_length: 1,
+			},
+		];
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
+
+		const result = await getLeaderboard();
+		expect(result).toHaveLength(2);
+		expect(result[0].name).toBe('Alice');
+		expect(result[0].games_won).toBe(3);
+		expect(result[0].games_played).toBe(3);
+		expect(result[0].win_rate).toBe(1);
+		expect(result[1].name).toBe('Bob');
+		expect(result[1].games_won).toBe(3);
+	});
+
+	it('returns empty array when no data', async () => {
+		mockRpc.mockResolvedValue({ data: null, error: null });
+
+		const result = await getLeaderboard();
+		expect(result).toEqual([]);
+	});
+
+	it('returns empty array on empty data', async () => {
+		mockRpc.mockResolvedValue({ data: [], error: null });
+
+		const result = await getLeaderboard();
+		expect(result).toEqual([]);
+	});
+
+	it('throws on RPC error', async () => {
+		mockRpc.mockResolvedValue({ data: null, error: new Error('rpc fail') });
+
+		await expect(getLeaderboard()).rejects.toThrow('rpc fail');
+	});
+
+	it('handles player with zero games played gracefully', async () => {
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 1,
+				games_won: 0,
+				win_rate: 0,
+				avg_timeline_length: 0,
+			},
+		];
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
+
+		const result = await getLeaderboard();
+		expect(result).toHaveLength(1);
+		expect(result[0].games_won).toBe(0);
+		expect(result[0].win_rate).toBe(0);
+		expect(result[0].avg_timeline_length).toBe(0);
+	});
+
+	it('respects limit parameter', async () => {
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 1,
+				games_won: 1,
+				win_rate: 1,
+				avg_timeline_length: 5,
+			},
+			{
+				user_id: 'u2',
+				name: 'Bob',
+				games_played: 1,
+				games_won: 1,
+				win_rate: 1,
+				avg_timeline_length: 3,
+			},
+		];
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
+
+		const result = await getLeaderboard(2);
+		expect(mockRpc).toHaveBeenCalledWith('get_leaderboard', { p_limit: 2 });
+		expect(result).toHaveLength(2);
+	});
+});
+
+describe('createRematch', () => {
+	it('calls create_rematch RPC and returns new room', async () => {
+		const newRoom = { id: 'r2', code: 'XYZ789', host_id: 'u1', status: 'waiting' };
+		mockRpc.mockResolvedValue({ data: newRoom, error: null });
+
+		const result = await createRematch('ABC');
+		expect(mockRpc).toHaveBeenCalledWith('create_rematch', { p_old_room_code: 'ABC' });
+		expect(result).toEqual(newRoom);
+	});
+
+	it('throws on error', async () => {
+		mockRpc.mockResolvedValue({ data: null, error: new Error('rematch failed') });
+		await expect(createRematch('ABC')).rejects.toThrow('rematch failed');
 	});
 });

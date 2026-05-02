@@ -189,6 +189,99 @@ export async function getCurrentPlayerInRoom(
 	return { playerId: data.id, userId: data.user_id };
 }
 
+export interface GameHistoryEntry {
+	room_id: string;
+	room_code: string;
+	created_at: string;
+	started_at: string | null;
+	finished_at: string | null;
+	game_duration: string | null;
+	winner_name: string | null;
+	players: string[];
+	player_count: number;
+}
+
+export interface LeaderboardEntry {
+	user_id: string;
+	name: string;
+	games_played: number;
+	games_won: number;
+	win_rate: number;
+	avg_timeline_length: number;
+}
+
+export async function addSpectator(roomId: string, userId: string): Promise<void> {
+	const { error } = await supabase
+		.from('spectators')
+		.insert({ room_id: roomId, user_id: userId })
+		.select()
+		.single();
+	if (error && error.code !== '23505') throw error; // Ignore duplicate
+}
+
+export async function getGameHistory(userId: string): Promise<GameHistoryEntry[]> {
+	const { data, error } = await supabase
+		.from('rooms')
+		.select(
+			`
+			id,
+			code,
+			created_at,
+			started_at,
+			finished_at,
+			game_duration,
+			players!inner(name, user_id),
+			winner:players!winner_player_id(name)
+		`
+		)
+		.eq('status', 'finished')
+		.eq('players.user_id', userId)
+		.order('finished_at', { ascending: false });
+
+	if (error) throw error;
+	if (!data) return [];
+
+	return data.map(
+		(row: {
+			id: string;
+			code: string;
+			created_at: string;
+			started_at: string | null;
+			finished_at: string | null;
+			game_duration: string | null;
+			players: { name: string; user_id: string }[];
+			winner: { name: string }[] | { name: string } | null;
+		}) => {
+			const winnerArr = Array.isArray(row.winner) ? row.winner : row.winner ? [row.winner] : [];
+			return {
+				room_id: row.id,
+				room_code: row.code,
+				created_at: row.created_at,
+				started_at: row.started_at,
+				finished_at: row.finished_at,
+				game_duration: row.game_duration,
+				winner_name: winnerArr[0]?.name ?? null,
+				players: row.players.map((p) => p.name),
+				player_count: row.players.length,
+			};
+		}
+	);
+}
+
+export async function getLeaderboard(limit: number = 20): Promise<LeaderboardEntry[]> {
+	const { data, error } = await supabase.rpc('get_leaderboard', { p_limit: limit });
+	if (error) throw error;
+	return (data ?? []) as LeaderboardEntry[];
+}
+
+export async function createRematch(oldRoomCode: string): Promise<Room> {
+	const { data, error } = await supabase.rpc('create_rematch', {
+		p_old_room_code: oldRoomCode,
+	});
+	if (error) throw error;
+	return data as Room;
+}
+
 export function subscribeToRoom(
 	roomId: string,
 	onChange: (payload: { event: string; table: string; new: Record<string, unknown> }) => void
