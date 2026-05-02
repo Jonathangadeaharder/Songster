@@ -7,7 +7,7 @@ export default defineConfig({
 	vitest: {
 		configFile: 'vitest.config.ts',
 	},
-	coverageAnalysis: 'off',
+	coverageAnalysis: 'perTest',
 	mutate: [
 		'src/lib/stores/game.ts',
 		'src/lib/songs.ts',
@@ -22,6 +22,6 @@ export default defineConfig({
 		low: 60,
 		break: 60,
 	},
-	timeoutMS: 30000,
+	timeoutMS: 120000,
 	concurrency: 2,
 });

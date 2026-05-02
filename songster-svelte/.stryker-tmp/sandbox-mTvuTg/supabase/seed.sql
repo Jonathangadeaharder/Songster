@@ -1,0 +1,2 @@
+-- Seed data for development
+-- No seed needed for production; the app uses a hardcoded SONG_DECK in songs.ts

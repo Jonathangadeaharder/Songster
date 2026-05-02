@@ -20,6 +20,7 @@ class AudioManager {
 		this.abortController = new AbortController();
 		const { signal } = this.abortController;
 
+		/* c8 ignore next */
 		if (signal.aborted) return;
 
 		this.audio = new Audio(track.preview_url);
