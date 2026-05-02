@@ -30,7 +30,7 @@ test.describe('Home page', () => {
 		await joinForm.getByPlaceholder('Room code').fill('ABC123');
 		await joinForm.getByPlaceholder('Your name').fill('Bob');
 		await joinForm.getByRole('button', { name: 'Join Room' }).click();
-		await expect(page).toHaveURL(/\/lobby\/DEMO/);
+		await expect(page).toHaveURL(/\/lobby\/ABC123/);
 	});
 
 	test('Solo play link navigates to lobby', async ({ page }) => {
