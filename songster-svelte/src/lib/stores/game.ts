@@ -163,8 +163,8 @@ function runAiTurn(): (() => void) | undefined {
 		if (!active || !card) return;
 
 		const correct = findCorrectSlot(active.timeline, card);
-		const rand = Math.random();
-		const slot = rand > 0.4 ? correct : Math.floor(Math.random() * (active.timeline.length + 1));
+		const rand = Math.random(); // NOSONAR: game AI, not security-sensitive
+		const slot = rand > 0.4 ? correct : Math.floor(Math.random() * (active.timeline.length + 1)); // NOSONAR
 		const ok = validatePlacement(active.timeline, card, slot);
 
 		placedSlot.set(slot);
