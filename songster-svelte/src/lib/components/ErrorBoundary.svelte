@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
 
 	let { children, fallback }: { children: Snippet; fallback?: Snippet } = $props();
@@ -7,6 +8,23 @@
 	function reset() {
 		error = null;
 	}
+
+	onMount(() => {
+		function onError(event: ErrorEvent) {
+			event.preventDefault();
+			error = event.error ?? new Error(event.message);
+		}
+		function onUnhandledRejection(event: PromiseRejectionEvent) {
+			event.preventDefault();
+			error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+		}
+		window.addEventListener('error', onError);
+		window.addEventListener('unhandledrejection', onUnhandledRejection);
+		return () => {
+			window.removeEventListener('error', onError);
+			window.removeEventListener('unhandledrejection', onUnhandledRejection);
+		};
+	});
 </script>
 
 {#if error}
@@ -18,7 +36,7 @@
 				<span class="error-icon">⚠</span>
 				<p class="error-title">Something went wrong</p>
 				<p class="error-msg">{error.message}</p>
-				<button class="error-retry" onclick={reset}>Try again</button>
+				<button type="button" class="error-retry" onclick={reset}>Try again</button>
 			</div>
 		{/if}
 	</div>

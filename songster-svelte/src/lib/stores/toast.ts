@@ -3,13 +3,13 @@ import { writable } from 'svelte/store';
 export type ToastType = 'success' | 'error' | 'info';
 
 export interface Toast {
-	id: number;
+	id: string;
 	message: string;
 	type: ToastType;
 	duration: number;
 }
 
-let nextId = 0;
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function createToastStore() {
 	const { subscribe, update } = writable<Toast[]>([]);
@@ -17,10 +17,13 @@ function createToastStore() {
 	return {
 		subscribe,
 		show(message: string, type: ToastType = 'info', duration = 3000) {
-			const id = nextId++;
+			const id = crypto.randomUUID();
 			update((toasts) => [...toasts, { id, message, type, duration }]);
 			if (duration > 0) {
-				setTimeout(() => this.dismiss(id), duration);
+				timers.set(
+					id,
+					setTimeout(() => this.dismiss(id), duration)
+				);
 			}
 			return id;
 		},
@@ -33,7 +36,12 @@ function createToastStore() {
 		info(message: string, duration?: number) {
 			return this.show(message, 'info', duration);
 		},
-		dismiss(id: number) {
+		dismiss(id: string) {
+			const timer = timers.get(id);
+			if (timer !== undefined) {
+				clearTimeout(timer);
+				timers.delete(id);
+			}
 			update((toasts) => toasts.filter((t) => t.id !== id));
 		},
 	};

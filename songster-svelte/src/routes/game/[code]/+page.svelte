@@ -272,6 +272,7 @@
 										: 'default'}; opacity: {$dragging ? 0.3 : 1}"
 							>
 								<button
+									disabled={$phase !== 'draw' || $activePlayerId !== $myPlayerId}
 									onclick={$phase === 'draw' && $activePlayerId === $myPlayerId
 										? onPlay
 										: undefined}
