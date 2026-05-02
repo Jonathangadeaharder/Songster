@@ -615,14 +615,7 @@ describe('game.runAiTurn — placement outcomes', () => {
 			}
 		}
 		if (wrongSlot === -1) {
-			const mathSpy = vi.spyOn(Math, 'random');
-			mathSpy.mockReturnValue(0.5);
-			game.runAiTurn();
-			vi.advanceTimersByTime(3300);
-			expect(get(game.placedResult)).toBe(true);
-			mathSpy.mockRestore();
-			vi.useRealTimers();
-			return;
+			throw new Error('Test setup error: no invalid slot found for AI timeline');
 		}
 
 		const mathSpy = vi.spyOn(Math, 'random');
