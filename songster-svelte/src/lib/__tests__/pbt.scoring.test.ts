@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { song, player, gameState, sortedSongDeck } from './generators';
-import { buildDrawPile, validatePlacement, findCorrectSlot } from '$lib/songs';
-import type { Player, Song } from '$lib/types';
+import { buildDrawPile, findCorrectSlot } from '$lib/songs';
 
 describe('PBT scoring — tokens non-negative', () => {
 	it('generated players always have tokens >= 0', () => {
