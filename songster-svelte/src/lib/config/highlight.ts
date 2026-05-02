@@ -1,4 +1,4 @@
-import { PUBLIC_HIGHLIGHT_PROJECT_ID } from '$env/static/public';
+import { PUBLIC_HIGHLIGHT_PROJECT_ID } from '$env/dynamic/public';
 
 export const HIGHLIGHT_PROJECT_ID = PUBLIC_HIGHLIGHT_PROJECT_ID || '1';
 export const HIGHLIGHT_BACKEND_URL = 'http://localhost:8082';
