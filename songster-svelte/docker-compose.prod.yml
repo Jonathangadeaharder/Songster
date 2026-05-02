@@ -1,0 +1,73 @@
+# Production overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --compatibility up -d
+#
+# Requires a .env file with all secrets populated.
+# Note: --compatibility flag is required for resource limits to take effect
+# outside of Docker Swarm mode.
+
+services:
+  app:
+    restart: unless-stopped
+    ports: [] # Remove exposed ports — only internal network
+    networks:
+      - songster-internal
+    mem_limit: 512m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-3000}/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  supabase-db:
+    restart: unless-stopped
+    ports: [] # Do not expose Postgres in production
+    networks:
+      - songster-internal
+    mem_limit: 2g
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+
+  supabase-auth:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    mem_limit: 256m
+    cpus: 0.5
+
+  supabase-realtime:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    mem_limit: 256m
+    cpus: 0.5
+
+  supabase-rest:
+    restart: unless-stopped
+    networks:
+      - songster-internal
+    mem_limit: 256m
+    cpus: 0.5
+
+  kong:
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # API gateway — only port exposed externally
+    networks:
+      - songster-internal
+    mem_limit: 256m
+    cpus: 0.5
+
+networks:
+  songster-internal:
+    driver: bridge
+
+volumes:
+  supabase-db-data:
+    driver: local
