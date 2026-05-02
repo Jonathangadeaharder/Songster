@@ -484,16 +484,17 @@ describe('getGameHistory', () => {
 	it('returns game history entries for user', async () => {
 		const rooms = [
 			{
-				room_id: 'r1',
-				rooms: {
-					id: 'r1',
-					code: 'ABC',
-					created_at: '2024-01-01',
-					started_at: '2024-01-01',
-					finished_at: '2024-01-01',
-					game_duration: '5m',
-					winner_player_id: 'p1',
-				},
+				id: 'r1',
+				code: 'ABC',
+				created_at: '2024-01-01',
+				started_at: '2024-01-01',
+				finished_at: '2024-01-01',
+				game_duration: '5m',
+				players: [
+					{ name: 'Alice', user_id: 'user-1' },
+					{ name: 'Bob', user_id: 'user-2' },
+				],
+				winner: [{ name: 'Alice' }],
 			},
 		];
 
@@ -502,30 +503,7 @@ describe('getGameHistory', () => {
 			eq: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: rooms, error: null }),
 		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: [{ name: 'Alice' }, { name: 'Bob' }], error: null }),
-		};
-
-		const winnerChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockReturnThis(),
-			single: vi.fn().mockResolvedValue({ data: { name: 'Alice' }, error: null }),
-		};
-
-		mockFrom.mockImplementation((table: string) => {
-			if (table === 'players') {
-				return playersChain;
-			}
-			return chain;
-		});
-
-		// First call for the main query, then player queries, then winner query
-		mockFrom.mockReturnValueOnce(chain);
-		mockFrom.mockReturnValueOnce(playersChain);
-		mockFrom.mockReturnValueOnce(winnerChain);
+		mockFrom.mockReturnValue(chain);
 
 		const result = await getGameHistory('user-1');
 		expect(result).toHaveLength(1);
@@ -561,16 +539,14 @@ describe('getGameHistory', () => {
 	it('handles room with no winner', async () => {
 		const rooms = [
 			{
-				room_id: 'r1',
-				rooms: {
-					id: 'r1',
-					code: 'ABC',
-					created_at: '2024-01-01',
-					started_at: null,
-					finished_at: null,
-					game_duration: null,
-					winner_player_id: null,
-				},
+				id: 'r1',
+				code: 'ABC',
+				created_at: '2024-01-01',
+				started_at: null,
+				finished_at: null,
+				game_duration: null,
+				players: [{ name: 'Alice', user_id: 'user-1' }],
+				winner: [],
 			},
 		];
 
@@ -579,15 +555,7 @@ describe('getGameHistory', () => {
 			eq: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: rooms, error: null }),
 		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: [{ name: 'Alice' }], error: null }),
-		};
-
-		mockFrom.mockReturnValueOnce(chain);
-		mockFrom.mockReturnValueOnce(playersChain);
+		mockFrom.mockReturnValue(chain);
 
 		const result = await getGameHistory('user-1');
 		expect(result[0].winner_name).toBeNull();
@@ -596,155 +564,68 @@ describe('getGameHistory', () => {
 
 describe('getLeaderboard', () => {
 	it('returns sorted leaderboard entries', async () => {
-		const finishedRooms = [
-			{ id: 'r1', winner_player_id: 'p1' },
-			{ id: 'r2', winner_player_id: 'p1' },
-			{ id: 'r3', winner_player_id: 'p2' },
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 3,
+				games_won: 3,
+				win_rate: 1,
+				avg_timeline_length: 2,
+			},
+			{
+				user_id: 'u2',
+				name: 'Bob',
+				games_played: 3,
+				games_won: 3,
+				win_rate: 1,
+				avg_timeline_length: 1,
+			},
 		];
-
-		const allPlayers = [
-			{ user_id: 'u1', name: 'Alice', id: 'p1', room_id: 'r1' },
-			{ user_id: 'u2', name: 'Bob', id: 'p2', room_id: 'r1' },
-			{ user_id: 'u1', name: 'Alice', id: 'p1', room_id: 'r2' },
-			{ user_id: 'u2', name: 'Bob', id: 'p2', room_id: 'r2' },
-			{ user_id: 'u1', name: 'Alice', id: 'p1', room_id: 'r3' },
-			{ user_id: 'u2', name: 'Bob', id: 'p2', room_id: 'r3' },
-		];
-
-		const timelineCounts = [
-			{ player_id: 'p1' },
-			{ player_id: 'p1' },
-			{ player_id: 'p1' },
-			{ player_id: 'p2' },
-			{ player_id: 'p2' },
-		];
-
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: finishedRooms, error: null }),
-		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: allPlayers, error: null }),
-		};
-
-		const timelinesChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: timelineCounts, error: null }),
-		};
-
-		mockFrom.mockReturnValueOnce(roomsChain);
-		mockFrom.mockReturnValueOnce(playersChain);
-		mockFrom.mockReturnValueOnce(timelinesChain);
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
 
 		const result = await getLeaderboard();
 		expect(result).toHaveLength(2);
-		// Both Alice and Bob have player_ids in winnerIds set
-		// so each appearance counts as a win
 		expect(result[0].name).toBe('Alice');
 		expect(result[0].games_won).toBe(3);
 		expect(result[0].games_played).toBe(3);
 		expect(result[0].win_rate).toBe(1);
 		expect(result[1].name).toBe('Bob');
 		expect(result[1].games_won).toBe(3);
-		expect(result[1].games_played).toBe(3);
 	});
 
-	it('returns empty array when no finished rooms', async () => {
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-		};
-		mockFrom.mockReturnValue(roomsChain);
+	it('returns empty array when no data', async () => {
+		mockRpc.mockResolvedValue({ data: null, error: null });
 
 		const result = await getLeaderboard();
 		expect(result).toEqual([]);
 	});
 
-	it('returns empty array on null finished rooms', async () => {
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-		};
-		mockFrom.mockReturnValue(roomsChain);
+	it('returns empty array on empty data', async () => {
+		mockRpc.mockResolvedValue({ data: [], error: null });
 
 		const result = await getLeaderboard();
 		expect(result).toEqual([]);
 	});
 
-	it('throws on rooms error', async () => {
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: null, error: new Error('rooms fail') }),
-		};
-		mockFrom.mockReturnValue(roomsChain);
+	it('throws on RPC error', async () => {
+		mockRpc.mockResolvedValue({ data: null, error: new Error('rpc fail') });
 
-		await expect(getLeaderboard()).rejects.toThrow('rooms fail');
-	});
-
-	it('throws on players error', async () => {
-		const finishedRooms = [{ id: 'r1', winner_player_id: 'p1' }];
-
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: finishedRooms, error: null }),
-		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: null, error: new Error('players fail') }),
-		};
-
-		mockFrom.mockReturnValueOnce(roomsChain);
-		mockFrom.mockReturnValueOnce(playersChain);
-
-		await expect(getLeaderboard()).rejects.toThrow('players fail');
-	});
-
-	it('returns empty array when no players found', async () => {
-		const finishedRooms = [{ id: 'r1', winner_player_id: 'p1' }];
-
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: finishedRooms, error: null }),
-		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: null, error: null }),
-		};
-
-		mockFrom.mockReturnValueOnce(roomsChain);
-		mockFrom.mockReturnValueOnce(playersChain);
-
-		const result = await getLeaderboard();
-		expect(result).toEqual([]);
+		await expect(getLeaderboard()).rejects.toThrow('rpc fail');
 	});
 
 	it('handles player with zero games played gracefully', async () => {
-		const finishedRooms = [{ id: 'r1', winner_player_id: null }];
-
-		const allPlayers = [{ user_id: 'u1', name: 'Alice', id: 'p1', room_id: 'r1' }];
-
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: finishedRooms, error: null }),
-		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: allPlayers, error: null }),
-		};
-
-		const timelinesChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: [], error: null }),
-		};
-
-		mockFrom.mockReturnValueOnce(roomsChain);
-		mockFrom.mockReturnValueOnce(playersChain);
-		mockFrom.mockReturnValueOnce(timelinesChain);
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 1,
+				games_won: 0,
+				win_rate: 0,
+				avg_timeline_length: 0,
+			},
+		];
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
 
 		const result = await getLeaderboard();
 		expect(result).toHaveLength(1);
@@ -754,38 +635,28 @@ describe('getLeaderboard', () => {
 	});
 
 	it('respects limit parameter', async () => {
-		const finishedRooms = [
-			{ id: 'r1', winner_player_id: 'p1' },
-			{ id: 'r2', winner_player_id: 'p2' },
-			{ id: 'r3', winner_player_id: 'p3' },
+		const rpcData = [
+			{
+				user_id: 'u1',
+				name: 'Alice',
+				games_played: 1,
+				games_won: 1,
+				win_rate: 1,
+				avg_timeline_length: 5,
+			},
+			{
+				user_id: 'u2',
+				name: 'Bob',
+				games_played: 1,
+				games_won: 1,
+				win_rate: 1,
+				avg_timeline_length: 3,
+			},
 		];
-
-		const allPlayers = [
-			{ user_id: 'u1', name: 'Alice', id: 'p1', room_id: 'r1' },
-			{ user_id: 'u2', name: 'Bob', id: 'p2', room_id: 'r2' },
-			{ user_id: 'u3', name: 'Charlie', id: 'p3', room_id: 'r3' },
-		];
-
-		const roomsChain = {
-			select: vi.fn().mockReturnThis(),
-			eq: vi.fn().mockResolvedValue({ data: finishedRooms, error: null }),
-		};
-
-		const playersChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: allPlayers, error: null }),
-		};
-
-		const timelinesChain = {
-			select: vi.fn().mockReturnThis(),
-			in: vi.fn().mockResolvedValue({ data: [], error: null }),
-		};
-
-		mockFrom.mockReturnValueOnce(roomsChain);
-		mockFrom.mockReturnValueOnce(playersChain);
-		mockFrom.mockReturnValueOnce(timelinesChain);
+		mockRpc.mockResolvedValue({ data: rpcData, error: null });
 
 		const result = await getLeaderboard(2);
+		expect(mockRpc).toHaveBeenCalledWith('get_leaderboard', { p_limit: 2 });
 		expect(result).toHaveLength(2);
 	});
 });

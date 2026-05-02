@@ -30,6 +30,7 @@
 	import type { Writable, Readable } from 'svelte/store';
 
 	let isDemo = $derived(code === 'DEMO');
+	let startedAt = $state<string | null>(null);
 	// svelte-ignore state_referenced_locally
 	const mode = writable<'demo' | 'remote'>(code === 'DEMO' ? 'demo' : 'remote');
 	$effect(() => {
@@ -76,10 +77,17 @@
 	let activePlayer: Player | undefined = $derived(
 		$players.find((p: Player) => p.id === $activePlayerId)
 	);
-	let me: Player | undefined = $derived($players.find((p: Player) => p.id === $myPlayerId));
-	let myTimeline = $derived(me?.timeline ?? []);
-	let myTokens = $derived(me?.tokens ?? 0);
-	let myLength = $derived(me?.timeline.length ?? 0);
+	let viewedPlayer: Player | undefined = $derived(
+		isSpectator
+			? $players.find((p: Player) => p.id === $activePlayerId)
+			: $players.find((p: Player) => p.id === $myPlayerId)
+	);
+	let me: Player | undefined = $derived(
+		!isSpectator ? $players.find((p: Player) => p.id === $myPlayerId) : undefined
+	);
+	let myTimeline = $derived(viewedPlayer?.timeline ?? []);
+	let myTokens = $derived(viewedPlayer?.tokens ?? 0);
+	let myLength = $derived(viewedPlayer?.timeline.length ?? 0);
 	let myTurnAndPlacing = $derived($phase === 'place' && $activePlayerId === $myPlayerId);
 
 	onMount(() => {
@@ -94,6 +102,8 @@
 			try {
 				const room = await getRoomByCode(code);
 				if (cancelled || !room) return;
+
+				startedAt = room.started_at;
 
 				if (isSpectator) {
 					// Spectator: connect without player ID
@@ -222,7 +232,7 @@
 				round={$round}
 				players={$players}
 				activePlayerId={$activePlayerId}
-				startTime={null}
+				startTime={startedAt}
 			/>
 
 			<div class="vinyl-section">

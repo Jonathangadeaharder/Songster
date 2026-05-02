@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createRematch } from '$lib/room';
+	import { onMount } from 'svelte';
+	import { createRematch, getRoomByCode } from '$lib/room';
+	import { supabase } from '$lib/supabase';
 
 	interface Props {
 		roomCode: string;
@@ -11,6 +13,29 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
+	onMount(() => {
+		if (isHost) return;
+
+		let channel: ReturnType<typeof supabase.channel> | null = null;
+
+		(async () => {
+			const room = await getRoomByCode(roomCode);
+			if (!room) return;
+
+			channel = supabase
+				.channel(`rematch:${room.id}`)
+				.on('broadcast', { event: 'rematch_created' }, (payload) => {
+					const newCode = payload.payload?.new_room_code;
+					if (newCode) goto(`/game/${newCode}`);
+				})
+				.subscribe();
+		})();
+
+		return () => {
+			if (channel) supabase.removeChannel(channel);
+		};
+	});
+
 	async function handleRematch() {
 		if (!isHost || loading) return;
 		loading = true;
@@ -18,6 +43,14 @@
 
 		try {
 			const newRoom = await createRematch(roomCode);
+			const channel = supabase.channel(`rematch:${roomCode}`);
+			await channel.subscribe();
+			await channel.send({
+				type: 'broadcast',
+				event: 'rematch_created',
+				payload: { new_room_code: newRoom.code },
+			});
+			supabase.removeChannel(channel);
 			goto(`/game/${newRoom.code}`);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to create rematch';

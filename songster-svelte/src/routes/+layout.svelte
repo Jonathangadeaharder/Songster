@@ -19,7 +19,9 @@
 	<a href="/leaderboard" class="nav-link">Leaderboard</a>
 </nav>
 
-{@render children()}
+<div class="content-wrapper">
+	{@render children()}
+</div>
 
 <style>
 	.nav {
@@ -45,5 +47,8 @@
 	}
 	.nav-link:hover {
 		opacity: 1;
+	}
+	.content-wrapper {
+		padding-top: 36px;
 	}
 </style>
