@@ -139,6 +139,27 @@ describe('game.onPlace', () => {
 		expect(after.timeline.length).toBe(me.timeline.length + 1);
 		expect(after.timeline).toContainEqual(card);
 	});
+
+	it('does not add card to timeline on incorrect placement', () => {
+		vi.useFakeTimers();
+
+		const fakeTimeline = [
+			{ id: 'a', num: 1, title: 'A', artist: 'X', year: 1970 } as const,
+			{ id: 'b', num: 2, title: 'B', artist: 'X', year: 1990 } as const,
+		];
+		const wrongCard = { id: 'w', num: 99, title: 'W', artist: 'Y', year: 1980 };
+
+		game.players.update((ps) =>
+			ps.map((p) => (p.id === 'p1' ? { ...p, timeline: [...fakeTimeline] } : p))
+		);
+		game.activeCard.set(wrongCard);
+		game.phase.set('place');
+
+		game.onPlace(0);
+		expect(get(game.placedResult)).toBe(false);
+		const after = get(game.players).find((p) => p.id === 'p1')!;
+		expect(after.timeline.length).toBe(2);
+	});
 });
 
 describe('game.onNextTurn', () => {
@@ -441,6 +462,17 @@ describe('game.startGame — guard condition', () => {
 		game.screen.set('win');
 		game.startGame();
 		expect(get(game.screen)).toBe('win');
+	});
+});
+
+describe('game.drawNext — empty pile', () => {
+	it('does nothing when draw pile is empty', () => {
+		game.onReplay();
+		game.startGame();
+		game.drawPile.set([]);
+		const cardBefore = get(game.activeCard);
+		game.drawNext();
+		expect(get(game.activeCard)).toEqual(cardBefore);
 	});
 });
 

@@ -163,9 +163,8 @@ function runAiTurn(): (() => void) | undefined {
 		if (!active || !card) return;
 
 		const correct = findCorrectSlot(active.timeline, card);
-		const rightful = correct >= 0 ? correct : 0;
 		const rand = Math.random();
-		const slot = rand > 0.4 ? rightful : Math.floor(Math.random() * (active.timeline.length + 1));
+		const slot = rand > 0.4 ? correct : Math.floor(Math.random() * (active.timeline.length + 1));
 		const ok = validatePlacement(active.timeline, card, slot);
 
 		placedSlot.set(slot);
