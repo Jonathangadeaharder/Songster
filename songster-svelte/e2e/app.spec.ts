@@ -92,7 +92,7 @@ test.describe('Results page', () => {
 	test('shows winner section', async ({ page }) => {
 		await page.goto('/results/DEMO');
 		await expect(page.getByText('Winner')).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Play Again' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Back to Lobby' })).toBeVisible();
 	});
 });
 
