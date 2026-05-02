@@ -108,7 +108,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t songster-svelte:ci .
+        run: |
+          docker build \
+            --build-arg PUBLIC_SUPABASE_URL=${{ secrets.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
+            --build-arg PUBLIC_SUPABASE_ANON_KEY=${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }} \
+            -t songster-svelte:ci .
         working-directory: songster-svelte
 
       - name: Verify health endpoint
