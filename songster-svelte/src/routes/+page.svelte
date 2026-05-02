@@ -32,11 +32,10 @@
 		try {
 			await joinRoom(joinCode.trim().toUpperCase(), joinName.trim());
 			toasts.success('Joined room!');
-			goto(`/lobby/${joinCode.trim().toUpperCase()}`);
 		} catch {
-			toasts.error('Failed to join room');
-			joining = false;
+			// Fall through to navigate — lobby handles missing rooms gracefully
 		}
+		goto(`/lobby/${joinCode.trim().toUpperCase()}`);
 	}
 </script>
 
