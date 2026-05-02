@@ -37,15 +37,22 @@ for file in "$MIGRATIONS_DIR"/*.sql; do
     [ -f "$file" ] || continue
     name="$(basename "$file")"
 
-    escaped_name="${name//\'/'\''}"
-    already=$(psql "$DB_URL" -t -A -c "SELECT 1 FROM _migrations WHERE name = '$escaped_name'")
-    if [ "$already" = "1" ]; then
-        echo "  skip  $name"
-        continue
-    fi
-
     echo "  apply $name"
-    psql "$DB_URL" -v ON_ERROR_STOP=1 -1 -q -f "$file" -c "INSERT INTO _migrations (name) VALUES ('$escaped_name');"
+
+    # Use advisory lock + single transaction for idempotency
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -v migration_name="$name" <<EOF
+SELECT pg_advisory_lock(hashtext(:'migration_name'));
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM _migrations WHERE name = :'migration_name') THEN
+    \i $file
+    INSERT INTO _migrations (name) VALUES (:'migration_name');
+  END IF;
+END
+\$\$;
+SELECT pg_advisory_unlock(hashtext(:'migration_name'));
+EOF
+
 done
 
 echo "Migrations complete."
