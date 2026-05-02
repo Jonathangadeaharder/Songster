@@ -15,6 +15,7 @@ COPY . .
 RUN pnpm run build
 
 # Prune dev dependencies after build
+ENV CI=true
 RUN pnpm prune --prod
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────
