@@ -4,7 +4,7 @@
 
 <div class="toast-container" role="status" aria-live="polite" aria-label="Notifications">
 	{#each $toasts as toast (toast.id)}
-		<div class="toast toast-{toast.type}" role="status">
+		<div class="toast toast-{toast.type}">
 			<span class="toast-icon">
 				{#if toast.type === 'success'}✓{:else if toast.type === 'error'}✕{:else}ℹ{/if}
 			</span>

@@ -3,8 +3,15 @@
 	import type { Snippet } from 'svelte';
 	import { tweaks } from '$lib/stores/tweaks';
 	import Toast from '$lib/components/Toast.svelte';
+	import { initAuth } from '$lib/stores/auth';
+	import AuthBar from '$lib/components/AuthBar.svelte';
+	import type { LayoutData } from './$types';
 
-	let { children }: { children: Snippet } = $props();
+	let { children, data }: { children: Snippet; data: LayoutData } = $props();
+
+	$effect(() => {
+		initAuth(data.session);
+	});
 
 	$effect(() => {
 		if (typeof document !== 'undefined') {
@@ -13,10 +20,20 @@
 	});
 </script>
 
+<div class="auth-bar-wrapper">
+	<AuthBar />
+</div>
+
 {@render children()}
 <Toast />
 
 <style>
+	.auth-bar-wrapper {
+		position: fixed;
+		top: 10px;
+		right: 16px;
+		z-index: 100;
+	}
 	:global(.skip-link) {
 		position: absolute;
 		top: -40px;

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Wordmark from '$lib/components/Wordmark.svelte';
-	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { createRoom, joinRoom } from '$lib/room';
 	import { toasts } from '$lib/stores/toast';
 
@@ -21,6 +20,7 @@
 			toasts.success('Room created!');
 			goto(`/lobby/${room.code}`);
 		} catch {
+			toasts.info('Using demo mode');
 			goto('/lobby/DEMO');
 		}
 	}
