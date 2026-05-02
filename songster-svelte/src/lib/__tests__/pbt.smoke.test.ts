@@ -47,15 +47,14 @@ describe('PBT smoke test — generators produce valid data', () => {
 
 	it('sortedSongDeck(n) returns exactly n songs sorted by year', () => {
 		fc.assert(
-			fc.property(fc.integer({ min: 1, max: 20 }), (n) =>
-				fc.assert(
-					fc.property(sortedSongDeck(n), (deck) => {
-						expect(deck.length).toBe(n);
-						for (let i = 1; i < deck.length; i++) {
-							expect(deck[i].year).toBeGreaterThanOrEqual(deck[i - 1].year);
-						}
-					})
-				)
+			fc.property(
+				fc.integer({ min: 1, max: 20 }).chain((n) => fc.tuple(fc.constant(n), sortedSongDeck(n))),
+				([n, deck]) => {
+					expect(deck.length).toBe(n);
+					for (let i = 1; i < deck.length; i++) {
+						expect(deck[i].year).toBeGreaterThanOrEqual(deck[i - 1].year);
+					}
+				}
 			)
 		);
 	});
