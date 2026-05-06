@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "epic/**", "feat/**", "fix/**", "test/**", "spike/**"]
+    branches: [main, "epic/**", "feat/**", "fix/**", "test/**"]
   pull_request:
     branches: [main]
 
@@ -100,35 +100,3 @@ jobs:
           name: playwright-report
           path: songster-svelte/playwright-report/
           retention-days: 7
-
-  build-verify:
-    name: Build & Verify
-    runs-on: self-hosted
-    env:
-      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: songster-svelte/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-
-      - name: Verify build output
-        run: |
-          if [ ! -d "build" ] && [ ! -d ".svelte-kit" ]; then
-            echo "::error::Build output not found"
-            exit 1
-          fi
