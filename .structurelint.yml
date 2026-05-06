@@ -1,0 +1,77 @@
+root: true
+
+exclude:
+  - node_modules/**
+  - .git/**
+  - .svelte-kit/**
+  - dist/**
+  - build/**
+  - coverage/**
+  - reports/**
+  - playwright-report/**
+
+rules:
+  max-depth:
+    max: 7
+    exemptions:
+      - ".git/**"
+      - "node_modules/**"
+
+  max-files-in-dir:
+    max: 30
+    exemptions:
+      - ".git/**"
+      - "node_modules/**"
+
+  max-subdirs:
+    max: 15
+    exemptions:
+      - ".git/**"
+
+  naming-convention:
+    style: "kebab-case"
+    apply-to:
+      - "**/*.ts"
+      - "**/*.svelte"
+      - "**/*.js"
+    exemptions:
+      - "**/node_modules/**"
+      - ".git/**"
+      - "README.md"
+
+  file-existence:
+    "README.md":
+      rule: "exists:1"
+      exemptions:
+        - "songster-svelte/**"
+        - "app/**"
+        - "docs/**"
+        - "scripts/**"
+        - "node_modules/**"
+
+  disallowed-patterns:
+    - "*.tmp"
+    - "*.bak"
+    - ".DS_Store"
+    - "*.swp"
+
+  test-adjacency:
+    pattern: "adjacent"
+    file-patterns:
+      - "**/*.ts"
+      - "**/*.svelte"
+    exemptions:
+      - "songster-svelte/src/lib/**"
+      - "songster-svelte/src/routes/**"
+      - "songster-svelte/src/test-mocks/**"
+      - "songster-svelte/src/test-setup.ts"
+      - "songster-svelte/src/app.d.ts"
+      - "songster-svelte/src/env.d.ts"
+      - "songster-svelte/src/hooks.server.ts"
+      - "songster-svelte/vite.config.ts"
+      - "songster-svelte/vitest.config.ts"
+      - "songster-svelte/stryker.config.ts"
+      - "songster-svelte/playwright.config.ts"
+      - "app/**"
+      - "scripts/**"
+      - "node_modules/**"
