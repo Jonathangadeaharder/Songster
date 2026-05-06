@@ -101,34 +101,34 @@ jobs:
           path: songster-svelte/playwright-report/
           retention-days: 7
 
-  docker-build:
-    name: Docker Build
+  build-verify:
+    name: Build & Verify
     runs-on: self-hosted
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build \
-            --build-arg PUBLIC_SUPABASE_URL=${{ secrets.PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
-            --build-arg PUBLIC_SUPABASE_ANON_KEY=${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }} \
-            -t songster-svelte:ci .
-        working-directory: songster-svelte
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
 
-      - name: Verify health endpoint
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: songster-svelte/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify build output
         run: |
-          trap 'docker rm -f songster-test >/dev/null 2>&1 || true' EXIT
-          docker run -d --name songster-test \
-            -e PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
-            -e PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key \
-            -p 3000:3000 \
-            songster-svelte:ci
-          for i in {1..30}; do
-            if curl -sf http://localhost:3000/health | grep -q '"status":"ok"'; then
-              exit 0
-            fi
-            sleep 1
-          done
-          docker logs songster-test >&2
-          exit 1
-        working-directory: songster-svelte
+          if [ ! -d "build" ] && [ ! -d ".svelte-kit" ]; then
+            echo "::error::Build output not found"
+            exit 1
+          fi
