@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { DeezerTrackData, Track } from '$lib/types';
 import type { RequestHandler } from './$types';
+import { getPostHogClient } from '$lib/server/posthog';
 
 const DEEZER_API = 'https://api.deezer.com';
 const cache = new Map<string, { data: Track[]; expires: number }>();
@@ -43,7 +44,7 @@ function setCached(key: string, data: Track[]): void {
 	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
 	const query = url.searchParams.get('q');
 	let limit = parseInt(url.searchParams.get('limit') ?? '10', 10);
 	if (Number.isNaN(limit) || limit <= 0) {
@@ -81,6 +82,18 @@ export const GET: RequestHandler = async ({ url }) => {
 		const data = await res.json();
 		const tracks: Track[] = (data.data ?? []).map(mapDeezerTrack);
 		setCached(cacheKey, tracks);
+
+		try {
+			const posthog = getPostHogClient();
+			const { session } = await locals.safeGetSession();
+			const distinctId = session?.user?.id;
+			posthog.capture({
+				distinctId,
+				event: 'track_searched',
+				properties: { query, result_count: tracks.length, limit },
+			});
+		} catch {}
+
 		return json(tracks);
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e) throw e;

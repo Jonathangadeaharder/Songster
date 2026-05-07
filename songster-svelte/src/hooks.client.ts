@@ -1,17 +1,18 @@
-import { H } from 'highlight.run';
-import {
-	HIGHLIGHT_PROJECT_ID,
-	HIGHLIGHT_BACKEND_URL,
-	highlightConfig,
-} from '$lib/config/highlight';
+import type { HandleClientError } from '@sveltejs/kit';
+import posthog from 'posthog-js';
+import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from '$env/static/public';
 
-H.init(HIGHLIGHT_PROJECT_ID, {
-	serviceName: 'songster',
-	environment: highlightConfig.environment,
-	tracingOrigins: true,
-	networkRecording: {
-		enabled: false,
-		recordHeadersAndBody: false,
-	},
-	backendUrl: HIGHLIGHT_BACKEND_URL,
-});
+export async function init() {
+	posthog.init(PUBLIC_POSTHOG_PROJECT_TOKEN, {
+		api_host: '/ingest',
+		ui_host: PUBLIC_POSTHOG_HOST,
+		defaults: '2026-01-30',
+		capture_exceptions: true,
+		person_profiles: 'identified_only',
+	});
+}
+
+export const handleError: HandleClientError = async ({ error, status, message }) => {
+	posthog.captureException(error);
+	return { message, status };
+};
