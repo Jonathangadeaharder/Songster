@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Session } from '@supabase/supabase-js';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { getPostHogClient, shutdownPostHog } from '$lib/server/posthog';
 
 const isPlaceholder =
 	PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' &&
@@ -14,6 +15,39 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const { pathname } = event.url;
+
+	if (pathname.startsWith('/ingest')) {
+		const useAssetHost =
+			pathname.startsWith('/ingest/static/') || pathname.startsWith('/ingest/array/');
+		const hostname = useAssetHost ? 'eu-assets.i.posthog.com' : 'eu.i.posthog.com';
+
+		const url = new URL(event.request.url);
+		url.protocol = 'https:';
+		url.hostname = hostname;
+		url.port = '443';
+		url.pathname = pathname.replace(/^\/ingest/, '');
+
+		const headers = new Headers(event.request.headers);
+		headers.set('host', hostname);
+		headers.set('accept-encoding', '');
+
+		const clientIp = event.request.headers.get('x-forwarded-for') || event.getClientAddress();
+		if (clientIp) {
+			headers.set('x-forwarded-for', clientIp);
+		}
+
+		const response = await fetch(url.toString(), {
+			method: event.request.method,
+			headers,
+			body: event.request.body,
+			// @ts-expect-error - duplex is required for streaming request bodies
+			duplex: 'half',
+		});
+
+		return response;
+	}
+
 	if (isPlaceholder) {
 		event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 			cookies: {
@@ -88,3 +122,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 		filterSerializedResponseHeaders: (name) => name === 'content-range',
 	});
 };
+
+export const handleError: HandleServerError = async ({ error, event }) => {
+	const posthog = getPostHogClient();
+	let distinctId: string | undefined;
+	try {
+		const { session } = await event.locals.safeGetSession?.();
+		distinctId = session?.user?.id;
+	} catch {}
+	posthog.captureException(error, distinctId);
+};
+
+process.on('SIGTERM', async () => {
+	await shutdownPostHog();
+	process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+	await shutdownPostHog();
+	process.exit(0);
+});

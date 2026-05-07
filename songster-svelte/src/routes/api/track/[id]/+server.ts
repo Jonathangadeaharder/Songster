@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { DeezerTrackData, Track } from '$lib/types';
 import type { RequestHandler } from './$types';
+import { getPostHogClient } from '$lib/server/posthog';
 
 const DEEZER_API = 'https://api.deezer.com';
 
@@ -25,7 +26,7 @@ function mapDeezerTrack(data: DeezerTrackData): Track {
 	};
 }
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const deezerId = parseInt(params.id, 10);
 	if (Number.isNaN(deezerId)) {
 		throw error(400, 'Invalid track ID');
@@ -51,6 +52,21 @@ export const GET: RequestHandler = async ({ params }) => {
 		}
 		const data = await res.json();
 		const track = mapDeezerTrack(data);
+
+		const posthog = getPostHogClient();
+		const { session } = await locals.safeGetSession();
+		const distinctId = session?.user?.id;
+		posthog.capture({
+			distinctId,
+			event: 'track_fetched',
+			properties: {
+				track_id: params.id,
+				title: track.title,
+				artist: track.artist,
+				year: track.year,
+			},
+		});
+
 		return json(track);
 	} catch (e) {
 		if (e && typeof e === 'object' && 'status' in e) throw e;
