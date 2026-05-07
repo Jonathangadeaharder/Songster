@@ -53,19 +53,21 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		const data = await res.json();
 		const track = mapDeezerTrack(data);
 
-		const posthog = getPostHogClient();
-		const { session } = await locals.safeGetSession();
-		const distinctId = session?.user?.id;
-		posthog.capture({
-			distinctId,
-			event: 'track_fetched',
-			properties: {
-				track_id: params.id,
-				title: track.title,
-				artist: track.artist,
-				year: track.year,
-			},
-		});
+		try {
+			const posthog = getPostHogClient();
+			const { session } = await locals.safeGetSession();
+			const distinctId = session?.user?.id;
+			posthog.capture({
+				distinctId,
+				event: 'track_fetched',
+				properties: {
+					track_id: params.id,
+					title: track.title,
+					artist: track.artist,
+					year: track.year,
+				},
+			});
+		} catch {}
 
 		return json(track);
 	} catch (e) {
