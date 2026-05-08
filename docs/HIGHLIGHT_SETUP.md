@@ -1,6 +1,6 @@
 # Local Highlight.io Setup
 
-Songster uses [Highlight.io](https://highlight.io) for session replay and telemetry. Data stays local — no cloud account needed.
+Replayd uses [Highlight.io](https://highlight.io) for session replay and telemetry. Data stays local — no cloud account needed.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ This launches ClickHouse, Kafka, Redis, Postgres, and the Highlight backend. Fir
 
 Open **http://localhost:3000** in your browser. Create a local account on first visit.
 
-The SvelteKit app sends telemetry to `http://localhost:8082` (configured in `songster-svelte/src/lib/config/highlight.ts`).
+The SvelteKit app sends telemetry to `http://localhost:8082` (configured in `replayd-svelte/src/lib/config/highlight.ts`).
 
 ## Stop
 

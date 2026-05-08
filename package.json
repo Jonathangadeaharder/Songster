@@ -1,7 +1,7 @@
 {
-  "name": "songster-monorepo",
+  "name": "replayd-monorepo",
   "private": true,
-  "description": "Monorepo root — manages git hooks only. App lives in songster-svelte/.",
+  "description": "Monorepo root — manages git hooks only. App lives in replayd-svelte/.",
   "scripts": {
     "prepare": "husky",
     "highlight:start": "docker compose -f docker-compose.highlight.yml up -d",
@@ -17,8 +17,8 @@
     "prettier-plugin-svelte": "^3.3.0"
   },
   "lint-staged": {
-    "songster-svelte/**/*.{ts,svelte,css,json}": [
-      "prettier --config songster-svelte/.prettierrc.json --write"
+    "replayd-svelte/**/*.{ts,svelte,css,json}": [
+      "prettier --config replayd-svelte/.prettierrc.json --write"
     ]
   }
 }

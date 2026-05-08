@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add spectator mode, rematch, game history, leaderboard, game stats, and supporting database/service changes to the Songster music trivia game.
+**Goal:** Add spectator mode, rematch, game history, leaderboard, game stats, and supporting database/service changes to the Replayd music trivia game.
 
-**Architecture:** Extend existing SvelteKit app in `songster-svelte/`. Add new routes for history and leaderboard. Extend existing game page with spectator mode via query parameter. Add rematch component to results page. Extend `room.ts` with new service functions. Add database migration for new columns and indexes.
+**Architecture:** Extend existing SvelteKit app in `replayd-svelte/`. Add new routes for history and leaderboard. Extend existing game page with spectator mode via query parameter. Add rematch component to results page. Extend `room.ts` with new service functions. Add database migration for new columns and indexes.
 
 **Tech Stack:** Svelte 5 (runes), SvelteKit, Supabase (PostgreSQL + Realtime), TypeScript, pnpm
 
@@ -13,25 +13,25 @@
 ## File Structure
 
 ### New Files
-- `songster-svelte/src/routes/history/+page.svelte` — Game history page
-- `songster-svelte/src/routes/leaderboard/+page.svelte` — Leaderboard page
-- `songster-svelte/src/lib/components/Rematch.svelte` — Rematch button component
-- `songster-svelte/src/lib/components/GameStats.svelte` — In-game statistics component
-- `songster-svelte/supabase/migrations/006_game_features.sql` — Database migration
+- `replayd-svelte/src/routes/history/+page.svelte` — Game history page
+- `replayd-svelte/src/routes/leaderboard/+page.svelte` — Leaderboard page
+- `replayd-svelte/src/lib/components/Rematch.svelte` — Rematch button component
+- `replayd-svelte/src/lib/components/GameStats.svelte` — In-game statistics component
+- `replayd-svelte/supabase/migrations/006_game_features.sql` — Database migration
 
 ### Modified Files
-- `songster-svelte/src/lib/room.ts` — Add new service functions
-- `songster-svelte/src/routes/game/[code]/+page.svelte` — Add spectator mode
-- `songster-svelte/src/routes/results/[code]/+page.svelte` — Add rematch component
-- `songster-svelte/src/lib/types.ts` — Add new types if needed
-- `songster-svelte/src/routes/+layout.svelte` — Add nav links for history/leaderboard
+- `replayd-svelte/src/lib/room.ts` — Add new service functions
+- `replayd-svelte/src/routes/game/[code]/+page.svelte` — Add spectator mode
+- `replayd-svelte/src/routes/results/[code]/+page.svelte` — Add rematch component
+- `replayd-svelte/src/lib/types.ts` — Add new types if needed
+- `replayd-svelte/src/routes/+layout.svelte` — Add nav links for history/leaderboard
 
 ---
 
 ## Task 1: Database Migration
 
 **Files:**
-- Create: `songster-svelte/supabase/migrations/006_game_features.sql`
+- Create: `replayd-svelte/supabase/migrations/006_game_features.sql`
 
 - [ ] **Step 1: Create migration file**
 
@@ -160,7 +160,7 @@ Run: Check SQL syntax by reading the file and verifying no typos.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/supabase/migrations/006_game_features.sql
+git add replayd-svelte/supabase/migrations/006_game_features.sql
 git commit -m "feat(db): add migration for game features (history, leaderboard, spectators, rematch)"
 ```
 
@@ -169,7 +169,7 @@ git commit -m "feat(db): add migration for game features (history, leaderboard, 
 ## Task 2: Room Service Additions
 
 **Files:**
-- Modify: `songster-svelte/src/lib/room.ts`
+- Modify: `replayd-svelte/src/lib/room.ts`
 
 - [ ] **Step 1: Add new types and functions to room.ts**
 
@@ -377,7 +377,7 @@ Expected: 0 errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/src/lib/room.ts
+git add replayd-svelte/src/lib/room.ts
 git commit -m "feat(room): add spectator, history, leaderboard, and rematch service functions"
 ```
 
@@ -386,7 +386,7 @@ git commit -m "feat(room): add spectator, history, leaderboard, and rematch serv
 ## Task 3: Game Stats Component
 
 **Files:**
-- Create: `songster-svelte/src/lib/components/GameStats.svelte`
+- Create: `replayd-svelte/src/lib/components/GameStats.svelte`
 
 - [ ] **Step 1: Create GameStats component**
 
@@ -487,7 +487,7 @@ Expected: 0 errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/src/lib/components/GameStats.svelte
+git add replayd-svelte/src/lib/components/GameStats.svelte
 git commit -m "feat(ui): add GameStats component for in-game statistics"
 ```
 
@@ -496,7 +496,7 @@ git commit -m "feat(ui): add GameStats component for in-game statistics"
 ## Task 4: Spectator Mode
 
 **Files:**
-- Modify: `songster-svelte/src/routes/game/[code]/+page.svelte`
+- Modify: `replayd-svelte/src/routes/game/[code]/+page.svelte`
 
 - [ ] **Step 1: Add spectator detection and mode**
 
@@ -686,7 +686,7 @@ Expected: 0 errors
 - [ ] **Step 7: Commit**
 
 ```bash
-git add songster-svelte/src/routes/game/[code]/+page.svelte
+git add replayd-svelte/src/routes/game/[code]/+page.svelte
 git commit -m "feat(game): add spectator mode with read-only view"
 ```
 
@@ -695,8 +695,8 @@ git commit -m "feat(game): add spectator mode with read-only view"
 ## Task 5: Rematch Component
 
 **Files:**
-- Create: `songster-svelte/src/lib/components/Rematch.svelte`
-- Modify: `songster-svelte/src/routes/results/[code]/+page.svelte`
+- Create: `replayd-svelte/src/lib/components/Rematch.svelte`
+- Modify: `replayd-svelte/src/routes/results/[code]/+page.svelte`
 
 - [ ] **Step 1: Create Rematch component**
 
@@ -786,7 +786,7 @@ git commit -m "feat(game): add spectator mode with read-only view"
 
 - [ ] **Step 2: Update results page to use Rematch component**
 
-Replace `songster-svelte/src/routes/results/[code]/+page.svelte`:
+Replace `replayd-svelte/src/routes/results/[code]/+page.svelte`:
 
 ```svelte
 <script lang="ts">
@@ -847,7 +847,7 @@ Expected: 0 errors
 - [ ] **Step 4: Commit**
 
 ```bash
-git add songster-svelte/src/lib/components/Rematch.svelte songster-svelte/src/routes/results/[code]/+page.svelte
+git add replayd-svelte/src/lib/components/Rematch.svelte replayd-svelte/src/routes/results/[code]/+page.svelte
 git commit -m "feat(results): add rematch button with auto-join for non-hosts"
 ```
 
@@ -856,7 +856,7 @@ git commit -m "feat(results): add rematch button with auto-join for non-hosts"
 ## Task 6: Game History Page
 
 **Files:**
-- Create: `songster-svelte/src/routes/history/+page.svelte`
+- Create: `replayd-svelte/src/routes/history/+page.svelte`
 
 - [ ] **Step 1: Create history page**
 
@@ -908,7 +908,7 @@ git commit -m "feat(results): add rematch button with auto-join for non-hosts"
   }
 </script>
 
-<Chrome title="Game History · Songster">
+<Chrome title="Game History · Replayd">
   {#snippet children()}
     <div class="history-page">
       <h1>Game History</h1>
@@ -1034,7 +1034,7 @@ Expected: 0 errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/src/routes/history/+page.svelte
+git add replayd-svelte/src/routes/history/+page.svelte
 git commit -m "feat(history): add game history page showing past games"
 ```
 
@@ -1043,7 +1043,7 @@ git commit -m "feat(history): add game history page showing past games"
 ## Task 7: Leaderboard Page
 
 **Files:**
-- Create: `songster-svelte/src/routes/leaderboard/+page.svelte`
+- Create: `replayd-svelte/src/routes/leaderboard/+page.svelte`
 
 - [ ] **Step 1: Create leaderboard page**
 
@@ -1081,7 +1081,7 @@ git commit -m "feat(history): add game history page showing past games"
   }
 </script>
 
-<Chrome title="Leaderboard · Songster">
+<Chrome title="Leaderboard · Replayd">
   {#snippet children()}
     <div class="leaderboard-page">
       <h1>Leaderboard</h1>
@@ -1230,7 +1230,7 @@ Expected: 0 errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/src/routes/leaderboard/+page.svelte
+git add replayd-svelte/src/routes/leaderboard/+page.svelte
 git commit -m "feat(leaderboard): add global leaderboard page with sortable stats"
 ```
 
@@ -1239,7 +1239,7 @@ git commit -m "feat(leaderboard): add global leaderboard page with sortable stat
 ## Task 8: Navigation Links
 
 **Files:**
-- Modify: `songster-svelte/src/routes/+layout.svelte`
+- Modify: `replayd-svelte/src/routes/+layout.svelte`
 
 - [ ] **Step 1: Add nav links to layout**
 
@@ -1253,7 +1253,7 @@ Expected: 0 errors
 - [ ] **Step 3: Commit**
 
 ```bash
-git add songster-svelte/src/routes/+layout.svelte
+git add replayd-svelte/src/routes/+layout.svelte
 git commit -m "feat(nav): add navigation links for history and leaderboard"
 ```
 
@@ -1263,17 +1263,17 @@ git commit -m "feat(nav): add navigation links for history and leaderboard"
 
 - [ ] **Step 1: Run type check**
 
-Run: `cd songster-svelte && pnpm run check`
+Run: `cd replayd-svelte && pnpm run check`
 Expected: 0 errors
 
 - [ ] **Step 2: Run tests**
 
-Run: `cd songster-svelte && pnpm run test`
+Run: `cd replayd-svelte && pnpm run test`
 Expected: All tests pass
 
 - [ ] **Step 3: Run build**
 
-Run: `cd songster-svelte && pnpm run build`
+Run: `cd replayd-svelte && pnpm run build`
 Expected: Build succeeds
 
 - [ ] **Step 4: Final commit if needed**
