@@ -3,17 +3,21 @@ FROM node:22-slim AS builder
 
 ARG PUBLIC_SUPABASE_URL
 ARG PUBLIC_SUPABASE_ANON_KEY
+ARG PUBLIC_POSTHOG_HOST
+ARG PUBLIC_POSTHOG_PROJECT_TOKEN
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm run build
-
-# Prune dev dependencies after build
 ENV CI=true
+ENV PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL
+ENV PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY
+ENV PUBLIC_POSTHOG_HOST=$PUBLIC_POSTHOG_HOST
+ENV PUBLIC_POSTHOG_PROJECT_TOKEN=$PUBLIC_POSTHOG_PROJECT_TOKEN
+RUN pnpm run build
 RUN pnpm prune --prod
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────
