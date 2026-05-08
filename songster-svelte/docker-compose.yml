@@ -7,11 +7,26 @@ services:
       - PUBLIC_SUPABASE_URL=http://localhost:8000
       - PUBLIC_SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - LOCAL_AI_BASE_URL=http://ollama:11434/v1
+      - PROD_AI_BASE_URL=${PROD_AI_BASE_URL:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
     depends_on:
       kong:
         condition: service_started
       supabase-auth:
         condition: service_started
+      ollama:
+        condition: service_started
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - '11434:11434'
+    command: serve
 
   supabase-db:
     image: supabase/postgres:15.1.0.117
@@ -82,3 +97,4 @@ services:
 
 volumes:
   supabase-db-data:
+  ollama_data:

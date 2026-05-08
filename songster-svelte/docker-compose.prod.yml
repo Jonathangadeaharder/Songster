@@ -9,6 +9,8 @@ services:
   app:
     restart: unless-stopped
     ports: [] # Remove exposed ports — only internal network
+    environment:
+      - AI_PROVIDER=${AI_PROVIDER:-mini}
     networks:
       - songster-internal
     mem_limit: 512m
@@ -64,10 +66,22 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  ollama:
+    restart: unless-stopped
+    ports: []
+    networks:
+      - songster-internal
+    mem_limit: 1500m
+    cpus: 1.5
+    volumes:
+      - ollama_data:/root/.ollama
+
 networks:
   songster-internal:
     driver: bridge
 
 volumes:
   supabase-db-data:
+    driver: local
+  ollama_data:
     driver: local
