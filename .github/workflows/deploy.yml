@@ -12,7 +12,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/songster-svelte
+  IMAGE_NAME: ${{ github.repository }}/replayd-svelte
 
 jobs:
   build-and-push:
@@ -44,7 +44,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: songster-svelte
+          context: replayd-svelte
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

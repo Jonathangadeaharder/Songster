@@ -17,7 +17,7 @@
 - `replayd-svelte/src/routes/leaderboard/+page.svelte` — Leaderboard page
 - `replayd-svelte/src/lib/components/Rematch.svelte` — Rematch button component
 - `replayd-svelte/src/lib/components/GameStats.svelte` — In-game statistics component
-- `replayd-svelte/supabase/migrations/006_game_features.sql` — Database migration
+- `replayd-svelte/supabase/migrations/005_game_features.sql` — Database migration
 
 ### Modified Files
 - `replayd-svelte/src/lib/room.ts` — Add new service functions
