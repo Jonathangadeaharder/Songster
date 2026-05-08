@@ -5,7 +5,6 @@ import {
 	GROQ_API_KEY,
 	LOCAL_AI_BASE_URL,
 	OPENROUTER_API_KEY,
-	PROD_AI_BASE_URL,
 } from "$env/static/private";
 
 type AIProvider = "ollama" | "openrouter" | "groq" | "mini";
@@ -16,11 +15,11 @@ const PROVIDER_DEFAULTS: Record<AIProvider, { baseURL: string; model: string }> 
 		model: "llama3.2",
 	},
 	openrouter: {
-		baseURL: PROD_AI_BASE_URL || "https://openrouter.ai/api/v1",
+		baseURL: "https://openrouter.ai/api/v1",
 		model: "openai/gpt-4.1-nano",
 	},
 	groq: {
-		baseURL: PROD_AI_BASE_URL || "https://api.groq.com/openai/v1",
+		baseURL: "https://api.groq.com/openai/v1",
 		model: "llama-3.3-70b-versatile",
 	},
 	mini: {
@@ -79,22 +78,26 @@ export async function generate(
 	const provider = resolveProvider();
 	const defaultConfig = PROVIDER_DEFAULTS[provider];
 
-	const response = await client.completions.create({
+	const response = await client.chat.completions.create({
 		model: options?.model ?? defaultConfig.model,
-		prompt,
+		messages: [{ role: "user", content: prompt }],
 		temperature: options?.temperature ?? 0.7,
 		max_tokens: options?.max_tokens ?? 256,
 	});
 
-	return response.choices[0]?.text ?? "";
+	return response.choices[0]?.message?.content ?? "";
 }
 
 export async function embed(text: string, options?: { model?: string }): Promise<number[]> {
 	const client = getClient();
 	const provider = resolveProvider();
 
+	if (provider === "groq") {
+		throw new Error("Groq does not support embeddings. Use ollama, mini, or openrouter instead.");
+	}
+
 	const embeddingModel =
-		provider === "mini" ? "all-minilm:l6-v2" : (options?.model ?? "text-embedding-ada-002");
+		provider === "mini" ? "nomic-embed-text" : (options?.model ?? "text-embedding-ada-002");
 
 	const response = await client.embeddings.create({
 		model: embeddingModel,

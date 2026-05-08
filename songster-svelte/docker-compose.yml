@@ -9,7 +9,6 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
       - LOCAL_AI_BASE_URL=http://ollama:11434/v1
-      - PROD_AI_BASE_URL=${PROD_AI_BASE_URL:-}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
     depends_on:
@@ -25,7 +24,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     ports:
-      - '11434:11434'
+      - '127.0.0.1:11434:11434'
     command: serve
 
   supabase-db:
