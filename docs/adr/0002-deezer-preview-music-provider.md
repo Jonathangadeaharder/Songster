@@ -8,13 +8,13 @@
 
 ## Context
 
-Songster requires audio playback of song snippets so players can identify the track and place it correctly on the timeline. We need a music provider that:
+Replayd requires audio playback of song snippets so players can identify the track and place it correctly on the timeline. We need a music provider that:
 
 1. **Requires no key for basic use** — reduces MVP friction; no OAuth dance for anonymous players.
 2. **Provides consistent metadata** — track title, artist, release year (needed for timeline scoring).
 3. **Offers reasonable audio quality** — recognisable 30-second clips.
 4. **Is legally usable** — preview URLs are licensed for streaming inside apps.
-5. **Has a free tier** — Songster is pre-revenue; zero API cost is essential for MVP.
+5. **Has a free tier** — Replayd is pre-revenue; zero API cost is essential for MVP.
 
 We evaluated the following options:
 
@@ -68,7 +68,7 @@ The architecture is provider-agnostic: `songs.ts` exports a `Track` interface, a
 
 - Deezer catalogue is smaller than Spotify in some regions.
 - Preview quality capped at 128 kbps (acceptable for game use).
-- Deezer's public API terms prohibit commercial use without a partner agreement — this will need revisiting pre-launch if Songster becomes revenue-generating.
+- Deezer's public API terms prohibit commercial use without a partner agreement — this will need revisiting pre-launch if Replayd becomes revenue-generating.
 - No server-side caching of preview URLs today; if Deezer CDN URLs expire (unlikely), the client would need a refresh.
 
 ### Neutral

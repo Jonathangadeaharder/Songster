@@ -78,7 +78,7 @@ describe('MusicProvider interface', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/types.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/types.test.ts`
 Expected: FAIL - `Track` and `MusicProvider` not exported from `$lib/types`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -101,7 +101,7 @@ export interface MusicProvider {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/types.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/types.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -203,7 +203,7 @@ describe('deezerProvider.getTrack', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/provider/deezer.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/provider/deezer.test.ts`
 Expected: FAIL - `deezerProvider` not found
 
 - [ ] **Step 3: Write minimal implementation**
@@ -258,7 +258,7 @@ export const deezerProvider: MusicProvider = {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/provider/deezer.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/provider/deezer.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Create test fixtures**
@@ -405,7 +405,7 @@ describe('/api/track/[id]', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/api/track.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/api/track.test.ts`
 Expected: FAIL - modules not found
 
 - [ ] **Step 3: Write minimal implementation**
@@ -538,7 +538,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/api/track.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/api/track.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -715,7 +715,7 @@ describe('AudioManager', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/audio.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/audio.test.ts`
 Expected: FAIL - `audioManager` not exported
 
 - [ ] **Step 3: Write minimal implementation**
@@ -805,7 +805,7 @@ export const audioManager = new AudioManager();
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/audio.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/audio.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -850,7 +850,7 @@ describe('trackToSong', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/songs.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/songs.test.ts`
 Expected: FAIL - `trackToSong` not exported
 
 - [ ] **Step 3: Write minimal implementation**
@@ -872,7 +872,7 @@ export function trackToSong(track: Track): Song {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/songs.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/songs.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -949,7 +949,7 @@ describe('DeckBuilder', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/DeckBuilder.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/DeckBuilder.test.ts`
 Expected: FAIL - component not found
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1022,7 +1022,7 @@ Expected: FAIL - component not found
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/DeckBuilder.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/DeckBuilder.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1073,7 +1073,7 @@ describe('Waveform', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/Waveform.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/Waveform.test.ts`
 Expected: FAIL - canvas not found (component uses div bars currently)
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1162,7 +1162,7 @@ Expected: FAIL - canvas not found (component uses div bars currently)
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/Waveform.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/Waveform.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1204,7 +1204,7 @@ describe('DeezerAttribution', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/DeezerAttribution.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/DeezerAttribution.test.ts`
 Expected: FAIL - component not found
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1234,7 +1234,7 @@ Expected: FAIL - component not found
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd songster-svelte && pnpm exec vitest run src/lib/__tests__/components/DeezerAttribution.test.ts`
+Run: `cd replayd-svelte && pnpm exec vitest run src/lib/__tests__/components/DeezerAttribution.test.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -1333,7 +1333,7 @@ include: [
 
 - [ ] **Step 4: Run full test suite**
 
-Run: `cd songster-svelte && pnpm exec vitest run`
+Run: `cd replayd-svelte && pnpm exec vitest run`
 Expected: All tests pass
 
 - [ ] **Step 5: Commit**
@@ -1349,17 +1349,17 @@ git commit -m "test(infra): add MSW handlers and update coverage config"
 
 - [ ] **Step 1: Type check**
 
-Run: `cd songster-svelte && pnpm exec tsc --noEmit`
+Run: `cd replayd-svelte && pnpm exec tsc --noEmit`
 Expected: No errors
 
 - [ ] **Step 2: Lint**
 
-Run: `cd songster-svelte && pnpm dlx @biomejs/biome check`
+Run: `cd replayd-svelte && pnpm dlx @biomejs/biome check`
 Expected: No errors (or fix any)
 
 - [ ] **Step 3: Coverage**
 
-Run: `cd songster-svelte && pnpm exec vitest run --coverage`
+Run: `cd replayd-svelte && pnpm exec vitest run --coverage`
 Expected: 90%+ branch coverage on all new files
 
 - [ ] **Step 4: Commit any fixes**

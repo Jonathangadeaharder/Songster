@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for the Songster project.
+This directory contains Architecture Decision Records (ADRs) for the Replayd project.
 
 ADRs capture significant architectural and technical decisions, their context, and their consequences.
 

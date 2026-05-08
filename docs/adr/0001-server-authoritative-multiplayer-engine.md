@@ -8,7 +8,7 @@
 
 ## Context
 
-Songster is a real-time multiplayer music trivia game (Hitster-style) where multiple players simultaneously place cards on a shared timeline. The core game loop requires:
+Replayd is a real-time multiplayer music trivia game (Hitster-style) where multiple players simultaneously place cards on a shared timeline. The core game loop requires:
 
 1. **Consistent shared state** — all players must see the same board at the same time.
 2. **Authoritative turn order** — only one player can place a card at a time; placements must be validated server-side.

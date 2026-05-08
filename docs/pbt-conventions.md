@@ -2,7 +2,7 @@
 
 ## Overview
 
-Songster uses [fast-check](https://github.com/dubzzz/fast-check) for property-based tests alongside traditional unit tests. PBT tests verify invariants across many randomly generated inputs.
+Replayd uses [fast-check](https://github.com/dubzzz/fast-check) for property-based tests alongside traditional unit tests. PBT tests verify invariants across many randomly generated inputs.
 
 ## File Naming
 
