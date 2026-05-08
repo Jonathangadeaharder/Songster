@@ -19,7 +19,7 @@ build/
 Thumbs.db
 
 # === iCloud duplicates ===
-* 2*
+* 2.*
 
 # === Test / coverage ===
 test-results/
