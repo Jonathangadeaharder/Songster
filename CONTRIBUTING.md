@@ -1,4 +1,4 @@
-# Contributing to Songster
+# Contributing to Replayd
 
 Thank you for your interest in contributing! This guide covers the development workflow, conventions, and tooling.
 
@@ -20,8 +20,8 @@ Thank you for your interest in contributing! This guide covers the development w
 ## Project structure
 
 ```
-Songster/
-├── songster-svelte/   # SvelteKit app (all application code lives here)
+Replayd/
+├── replayd-svelte/   # SvelteKit app (all application code lives here)
 │   ├── src/
 │   │   ├── lib/       # Shared utilities, stores, components
 │   │   └── routes/    # SvelteKit file-based routing
@@ -51,14 +51,14 @@ Songster/
 
 ```bash
 # 1. Clone the repo
-git clone git@github.com:Jonathangadeaharder/Songster.git
-cd Songster
+git clone git@github.com:Jonathangadeaharder/Replayd.git
+cd Replayd
 
 # 2. Install root devDependencies (husky + lint-staged)
 pnpm install
 
 # 3. Install app dependencies
-cd songster-svelte
+cd replayd-svelte
 pnpm install
 
 # 4. Copy environment template
@@ -101,7 +101,7 @@ pnpm test:mutant
 
 ## Code style
 
-Formatting is enforced by **Prettier** (config in `songster-svelte/.prettierrc.json`) and run automatically as a pre-commit hook via lint-staged.
+Formatting is enforced by **Prettier** (config in `replayd-svelte/.prettierrc.json`) and run automatically as a pre-commit hook via lint-staged.
 
 Key settings:
 - Tabs (not spaces)
@@ -112,7 +112,7 @@ Key settings:
 To format manually:
 
 ```bash
-cd songster-svelte
+cd replayd-svelte
 pnpm exec prettier --write src/
 ```
 

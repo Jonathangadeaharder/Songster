@@ -7,7 +7,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 const ROOT = resolve(__dirname, '../..');
-const APP = resolve(ROOT, 'songster-svelte');
+const APP = resolve(ROOT, 'replayd-svelte');
 const BUILD = resolve(APP, 'build');
 
 const PLACEHOLDER_ENV: Record<string, string> = {
@@ -213,7 +213,7 @@ describe('deploy smoke', () => {
 					--build-arg PUBLIC_SUPABASE_ANON_KEY=${PLACEHOLDER_ENV.PUBLIC_SUPABASE_ANON_KEY} \
 					--build-arg PUBLIC_POSTHOG_HOST=${PLACEHOLDER_ENV.PUBLIC_POSTHOG_HOST} \
 					--build-arg PUBLIC_POSTHOG_PROJECT_TOKEN=${PLACEHOLDER_ENV.PUBLIC_POSTHOG_PROJECT_TOKEN} \
-					-t songster-smoke-test \
+					-t replayd-smoke-test \
 					.`,
 				{ cwd: APP, stdio: 'pipe', timeout: 300_000 }
 			);
@@ -223,7 +223,7 @@ describe('deploy smoke', () => {
 			if (!dockerAvailable()) return;
 
 			const { stdout } = await execAsync(
-				'docker run -d --rm -p 3099:3000 --name songster-smoke songster-smoke-test'
+				'docker run -d --rm -p 3099:3000 --name replayd-smoke replayd-smoke-test'
 			);
 			dockerContainerId = stdout.trim();
 
@@ -261,7 +261,7 @@ describe('deploy smoke', () => {
 				dockerContainerId = null;
 			}
 			try {
-				execSync('docker rmi songster-smoke-test', { stdio: 'pipe' });
+				execSync('docker rmi replayd-smoke-test', { stdio: 'pipe' });
 			} catch {
 				// image may not exist
 			}
