@@ -18,6 +18,9 @@ build/
 .DS_Store
 Thumbs.db
 
+# === iCloud duplicates ===
+* 2.*
+
 # === Test / coverage ===
 test-results/
 playwright-report/
