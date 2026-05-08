@@ -43,10 +43,5 @@
 		"posthog-node": "^5.33.3",
 		"svelte-dnd-action": "^0.9.0"
 	},
-	"type": "module",
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild"
-		]
-	}
+	"type": "module"
 }
