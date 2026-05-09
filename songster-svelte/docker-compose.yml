@@ -15,6 +15,11 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma2:2b}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.songster.rule=Host(`songster.159.223.26.67.sslip.io`)
+      - traefik.http.routers.songster.entrypoints=http
+      - traefik.http.services.songster.loadbalancer.server.port=3000
     restart: unless-stopped
     networks:
       - coolify
