@@ -22,6 +22,10 @@ services:
       - traefik.enable=true
       - traefik.http.routers.songster.rule=Host(`songster.159.223.26.67.sslip.io`)
       - traefik.http.routers.songster.entrypoints=http
+      - traefik.http.routers.songster-https.rule=Host(`songster.159.223.26.67.sslip.io`)
+      - traefik.http.routers.songster-https.entrypoints=https
+      - traefik.http.routers.songster-https.tls=true
+      - traefik.http.routers.songster-https.tls.certresolver=letsencrypt
       - traefik.http.services.songster.loadbalancer.server.port=3000
     restart: unless-stopped
     networks:
