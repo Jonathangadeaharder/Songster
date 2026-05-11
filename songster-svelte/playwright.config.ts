@@ -10,6 +10,9 @@ export default defineConfig({
 	use: {
 		baseURL: 'http://localhost:4173',
 		trace: 'on-first-retry',
+		launchOptions: {
+			args: ['--mute-audio'],
+		},
 	},
 	webServer: {
 		command: 'pnpm build && pnpm preview --strictPort',
